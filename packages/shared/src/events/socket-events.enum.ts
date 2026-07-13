@@ -1,0 +1,15 @@
+export enum SocketEvent {
+  MESSAGE_NEW = "message:new",
+  MESSAGE_ACK = "message:ack",
+  MESSAGE_EDIT = "message:edit",
+  MESSAGE_DELETE = "message:delete",
+  TYPING_START = "typing:start",
+  TYPING_STOP = "typing:stop",
+  PRESENCE_UPDATE = "presence:update",
+  RECEIPT_READ = "receipt:read",
+  RECEIPT_UPDATE = "receipt:update",
+  REACTION_ADD = "reaction:add",
+  REACTION_REMOVE = "reaction:remove",
+  CONVERSATION_JOIN = "conversation:join",
+  ERROR = "error",
+}
