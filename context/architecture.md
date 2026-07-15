@@ -319,7 +319,7 @@ socket disconnect → SREM socket from set → if set empty → SET user:{id}:st
 - **Frontend:** `@clerk/nextjs` middleware protects the `(protected)` route group. `useCurrentUser()` wraps Clerk's `useUser()` — features never call Clerk hooks directly, they call this wrapper (so swapping identity providers later touches one file).
 - **Backend REST:** `ClerkAuthGuard` (global, `@Public()` decorator to opt out) verifies the Clerk session JWT on every request, attaches `req.user` via `@CurrentUser()`.
 - **Backend Socket.io:** the JWT is verified in the gateway's `handleConnection` (not per-event) — reject the handshake if invalid, store `userId` on the socket instance, never trust a `userId` field sent in an event payload.
-- **First-party user record:** `users.clerk_id` is the join key. On first authenticated request/connection, upsert a local `users` row from the Clerk profile (webhook `user.created` is the correct trigger, not lazy upsert-on-request, to avoid a race on first message send).
+- **First-party user record:** `users.clerk_id` is the join key. On first authenticated request/connection, upsert a local `users` row from the Clerk profile. The `ClerkAuthGuard` auto-creates the user on first access (fetches from Clerk API) — this covers the race window between sign-up and webhook delivery. The webhook (`user.created`) provides eventual consistency but is not the sole creation path.
 
 ## Invariants — never violate these
 

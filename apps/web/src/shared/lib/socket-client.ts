@@ -21,13 +21,14 @@ export function createSocket(token: string): Socket {
   socket = io(SOCKET_URL, {
     auth: { token },
     transports: ["websocket"],
-    autoConnect: true,
+    autoConnect: false,
   });
   return socket;
 }
 
 export function disconnectSocket(): void {
   if (socket) {
+    socket.removeAllListeners();
     socket.disconnect();
     socket = null;
   }

@@ -88,6 +88,67 @@ Never read `process.env` directly inside a service/component — go through the 
 - **Idempotency:** `message:new` payloads include a client-generated `clientId` (uuid). `MessagesService.create()` is idempotent on `(conversation_id, sender_id, clientId)` for a short window — protects against double-send on reconnect/retry.
 - **N+1 guard:** conversation list / message list queries must eager-load via TypeORM relations or a single joined query — never loop-query per-row for sender profile or receipt status.
 
+## Frontend Form Pattern (react-hook-form + zod)
+
+All frontend forms use **react-hook-form** with **zod** for validation. This is the only accepted form pattern — do not use `useState` for form fields or manual validation.
+
+### Setup
+
+```typescript
+// features/my-feature/dtos/my-form-schema.ts
+import { z } from "zod";
+
+export const myFormSchema = z.object({
+  fieldName: z.string().min(1, "Field is required").max(100),
+  email: z.string().email("Invalid email"),
+  optionalField: z.string().max(200).optional(),
+});
+
+export type MyFormData = z.infer<typeof myFormSchema>;
+```
+
+### Component pattern
+
+```typescript
+// features/my-feature/ui/MyForm.tsx
+"use client";
+
+import { useForm, FormProvider } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { myFormSchema, type MyFormData } from "../dtos/my-form-schema";
+
+export function MyForm({ onSubmit }: { onSubmit: (data: MyFormData) => Promise<void> }) {
+  const methods = useForm<MyFormData>({
+    resolver: zodResolver(myFormSchema),
+    defaultValues: { fieldName: "", email: "", optionalField: "" },
+  });
+
+  const { handleSubmit, register, formState: { errors, isSubmitting } } = methods;
+
+  return (
+    <FormProvider {...methods}>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <div>
+          <label>Field Name</label>
+          <input {...register("fieldName")} />
+          {errors.fieldName && <p className="text-danger text-xs">{errors.fieldName.message}</p>}
+        </div>
+        <button type="submit" disabled={isSubmitting}>Submit</button>
+      </form>
+    </FormProvider>
+  );
+}
+```
+
+### Rules
+
+1. **Schema location:** `features/<feature>/dtos/<name>-schema.ts` (frontend-only validation schemas)
+2. **Always use `FormProvider`** when form fields are nested in child components
+3. **Error messages** use `className="text-danger text-xs"` — same as backend validation error display
+4. **Field labels** follow the `ui-registry.md` Form Field pattern: `text-[11px] font-medium text-text-muted tracking-label uppercase mb-2`
+5. **Input styling** follows `ui-registry.md`: `w-full px-4 py-3 bg-surface border border-border rounded-xl font-sans text-base text-text placeholder:text-text-muted outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10`
+6. **Multi-mode forms** (e.g., direct vs group): create separate schemas, instantiate separate `useForm` instances, swap which one is active via a `mode` state — do not use conditional schema logic inside a single zod schema
+
 ## Hard Rules (violating these is a REVIEW-blocking defect)
 
 1. A build-plan task is `[UI]` xor `[LOGIC]` — never both (see `AGENTS.md`).

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ReactNode } from "react";
 import { AppProviders } from "@/shared/context/AppProviders";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Talko",

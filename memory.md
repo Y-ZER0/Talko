@@ -1,41 +1,44 @@
-# Memory — Phase 0 Foundations
+# Memory — Phase 4.2: Frontend Socket Infrastructure
 
-Last updated: 2026-07-13
+Last updated: 2026-07-15
 
 ## What was built
 
-- **Root monorepo**: `package.json`, `pnpm-workspace.yaml`, `turbo.json`, `tsconfig.base.json`, `.gitignore`, `.npmrc`
-- **`packages/shared`** (`@repo/shared`): DTOs (user, conversation, message, reaction, receipt, auth), Socket event contracts (socket-events.enum, typing, presence, receipt, message), enums (MessageMediaType, UserRole), barrel export
-- **`apps/api`** (NestJS 11): All module directories scaffolded per `architecture.md`, `AppModule` with TypeORM + Config + global ValidationPipe, `main.ts` with CORS, `RedisModule` (global ioredis), initial DB migration for all 6 canonical tables (users, conversations, conversation_members, messages, message_receipts, message_reactions) with FKs and cascade deletes
-- **`apps/web`** (Next.js 15 App Router): All route groups scaffolded (auth, protected chat, account/*), Clerk middleware, `AppProviders` with `QueryClientProvider`, `api-client.ts` + `socket-client.ts` lib wrappers
+**Phase 4, Task 4.2 `[LOGIC]` — Frontend socket infrastructure:**
+
+- `apps/web/src/shared/lib/socket-client.ts` — modified `createSocket` to use `autoConnect: false` (context registers handlers first, calls `.connect()`); `disconnectSocket` now calls `removeAllListeners()`
+- `apps/web/src/features/presence/context/SocketContext.tsx` — `SocketProvider`: uses Clerk `useAuth()` to get token, creates socket on sign-in, disconnects on sign-out. Registers connect/disconnect/connect_error handlers. Tracks joined rooms via `pendingJoins` ref, rejoins all on reconnect. Exposes `joinRoom()` / `leaveRoom()` + `activeRooms` array + `isConnected`.
+- `apps/web/src/features/presence/hooks/useSocket.ts` — consumer hook that returns context or throws if used outside `SocketProvider`
+- `packages/shared/src/events/socket-events.enum.ts` — grouped events into sections (Message/Typing/Reaction/Receipt/Conversation/Presence/System), added `CONVERSATION_LEAVE`
 
 ## Decisions made
 
-- **tsconfig baseUrl**: Root `tsconfig.base.json` sets `baseUrl: "."` (repo root). Each child tsconfig must explicitly override `baseUrl: "."` (its own directory) for path resolution — otherwise `@/*: ["./src/*"]` resolves relative to the repo root, not the app's root
-- **NestJS `@Global()` RedisModule**: Redis client provided globally so any module can inject `"REDIS_CLIENT"` without re-importing
-- **Migration-first approach**: Schema changes go into migration files + `architecture.md` DBML block in the same session (per `architecture.md` Invariant 8)
+- **autoConnect: false**: Socket context registers event handlers (connect/disconnect/connect_error) before calling `.connect()` — avoids missing the initial connect event on a fast connection.
+- **pendingJoins ref for rejoin**: `joinRoom`/`leaveRoom` mutate a `Ref<Set<string>>` so it persists across socket reconnections. On `connect`, all pending rooms are re-emitted via `conversation:join`. State-driven `activeRooms` array triggers consumer re-renders.
+- **SocketProvider tied to Clerk auth**: No socket until `isSignedIn` is true. Disconnects and clears rooms on sign-out. Token fetched via `getToken()` for fresh JWTs.
+- **CONVERSATION_LEAVE added to enum**: Follows the same pattern as `CONVERSATION_JOIN`, even though the gateway doesn't handle it yet — the enum is the contract.
 
 ## Problems solved
 
-- **Turbo 2.x `pipeline` → `tasks`**: Turbo v2 renamed `pipeline` to `tasks` in `turbo.json` — fixed after first failed run
-- **`@clerk/nextjs` missing**: Not in initial deps — added after typecheck failed on `middleware.ts` import
-- **`dotenv` needed for TypeORM CLI**: `data-source.ts` reads `DATABASE_URL` directly via dotenv for migration commands; added as api dependency
+- `createSocket` was using `autoConnect: true`, creating a race between socket connection and handler registration. Changed to `autoConnect: false` — context now registers handlers then calls `.connect()`.
 
 ## Current state
 
-- Project typechecks green across all 3 workspaces (shared, api, web)
-- No database running yet — migrations not executed
-- Phase 0 is complete; all 4 checklist items marked in `progress-tracker.md`
+- Phases 1–3 complete
+- Phase 4.1 (ChatGateway) complete
+- Phase 4.2 (socket-client + SocketContext + useSocket) complete — all typechecks green across all 3 workspaces
+- Phase 4.3 (MessageList/MessageBubble/MessageComposer + optimistic send UI) is next
+- No database running yet
 
 ## Next session starts with
 
-**Phase 1 — Feature 2: Authentication & Profiles**
-
-1. `[LOGIC]` NestJS: Clerk JWT verification (`ClerkAuthGuard`, `@Public()` decorator, `@CurrentUser()`), `users` module (entity/service/repo/controller), Clerk `user.created` webhook → upsert local `users` row
-2. `[LOGIC]` Next.js: `@clerk/nextjs` middleware over `(protected)` route group, `useCurrentUser()` wrapper hook, `auth.service.ts`
-3. `[UI]` Login/Register pages (Clerk components), `AuthGuard` redirect states
-4. `[UI]` Account/Profile page — ProfileHeader, PersonalDetailsForm
+**Phase 4, Task 4.3 `[UI]` — Message timeline + composer:**
+1. `apps/web/src/features/messages/ui/MessageList.tsx` — infinite scroll, renders `MessageBubble` per message
+2. `apps/web/src/features/messages/ui/MessageBubble.tsx` — sent/received styling, status indicators
+3. `apps/web/src/features/messages/ui/MessageComposer.tsx` — text input, send button, wire to `useSendMessage` + socket emit
+4. Wire `SocketProvider` into `(chat)/layout.tsx`
+5. Mount `MessageList` + `MessageComposer` in `chat/[conversationId]/page.tsx`
 
 ## Open questions
 
-- None currently — Phase 0 completed as planned
+- None

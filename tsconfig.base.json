@@ -9,14 +9,12 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
     "sourceMap": true,
-    "outDir": "dist",
     "baseUrl": ".",
     "paths": {
       "@repo/shared": ["packages/shared/src"]
-    }
+    },
+    "ignoreDeprecations": "5.0"
   },
   "exclude": ["node_modules", "dist"]
 }

@@ -12,3 +12,9 @@ export interface MessageDto {
   editedAt: string | null;
   clientId: string;
 }
+
+export interface MessagesCursorResponse {
+  data: MessageDto[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}

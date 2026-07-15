@@ -1,0 +1,77 @@
+"use client";
+
+import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
+
+interface SettingsTopBarProps {
+  hasUnsavedChanges?: boolean;
+  onSave?: () => void;
+  isSaving?: boolean;
+}
+
+export function SettingsTopBar({
+  hasUnsavedChanges = false,
+  onSave,
+  isSaving = false,
+}: SettingsTopBarProps) {
+  const { user } = useCurrentUser();
+
+  return (
+    <header className="flex items-center justify-between px-6 py-4 bg-bg border-b border-border">
+      <div className="flex items-center gap-3">
+        <a
+          href="/"
+          aria-label="Back to chat"
+          className="w-10 h-10 rounded-full bg-surface-muted flex items-center justify-center text-text no-underline hover:bg-border transition-colors"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M19 12H5" />
+            <path d="M12 19l-7-7 7-7" />
+          </svg>
+        </a>
+
+        <div className="w-10 h-10 rounded-xl bg-text flex items-center justify-center">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+        </div>
+
+        <div>
+          <h1 className="text-lg font-semibold text-text leading-tight m-0">
+            Account
+          </h1>
+          <p className="text-[11px] font-medium text-text-muted tracking-label uppercase m-0.5">
+            Profile & Settings
+          </p>
+        </div>
+      </div>
+
+      {hasUnsavedChanges && (
+        <button
+          onClick={onSave}
+          disabled={isSaving}
+          className="bg-primary-500 text-text-inverse font-semibold text-sm px-5 py-2.5 rounded-full border-none cursor-pointer hover:bg-primary-600 disabled:opacity-70 disabled:cursor-not-allowed transition-colors"
+        >
+          {isSaving ? "Saving..." : "Save changes"}
+        </button>
+      )}
+    </header>
+  );
+}

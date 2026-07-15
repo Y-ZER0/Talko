@@ -4,6 +4,11 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import configuration from "./config/configuration";
 import { RedisModule } from "./modules/presence/redis/redis.module";
+import { AuthModule } from "./modules/auth/auth.module";
+import { UsersModule } from "./modules/users/users.module";
+import { ConversationsModule } from "./modules/conversations/conversations.module";
+import { MessagesModule } from "./modules/messages/messages.module";
+import { RealtimeModule } from "./modules/realtime/realtime.module";
 
 @Module({
   imports: [
@@ -22,6 +27,11 @@ import { RedisModule } from "./modules/presence/redis/redis.module";
       }),
     }),
     RedisModule,
+    AuthModule,
+    UsersModule,
+    ConversationsModule,
+    MessagesModule,
+    RealtimeModule,
   ],
   providers: [
     {
