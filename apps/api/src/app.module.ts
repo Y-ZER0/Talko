@@ -22,6 +22,7 @@ import { RealtimeModule } from "./modules/realtime/realtime.module";
       useFactory: (config: ConfigService) => ({
         type: "postgres",
         url: config.get<string>("app.databaseUrl"),
+        ssl: { rejectUnauthorized: false },
         autoLoadEntities: true,
         synchronize: false,
       }),

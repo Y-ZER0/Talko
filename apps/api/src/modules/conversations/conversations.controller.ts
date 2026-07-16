@@ -35,6 +35,14 @@ export class ConversationsController {
     return this.conversationsService.getMyConversations(user.id);
   }
 
+  @Get(":id")
+  async getConversation(
+    @CurrentUser() user: User,
+    @Param("id") conversationId: string,
+  ) {
+    return this.conversationsService.getConversation(user.id, conversationId);
+  }
+
   @Post(":id/members")
   async addMember(
     @CurrentUser() user: User,

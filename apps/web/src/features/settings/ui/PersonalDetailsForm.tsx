@@ -74,16 +74,17 @@ export function PersonalDetailsForm({
 
   return (
     <FormProvider {...methods}>
-      <ProfileHeader
-        displayName={displayName}
-        username={username}
-        userId={userId}
-        avatarUrl={avatarUrl}
-        coverUrl={coverUrl}
-        isOnline={isOnline}
-      />
+      <div className="flex flex-col gap-4">
+        <ProfileHeader
+          displayName={displayName}
+          username={username}
+          userId={userId}
+          avatarUrl={avatarUrl}
+          coverUrl={coverUrl}
+          isOnline={isOnline}
+        />
 
-      <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={handleSubmit(onSubmit)}>
         <div className="bg-surface rounded-2xl p-6">
           <h3 className="text-base font-semibold text-text m-0 mb-1">
             Personal details
@@ -158,6 +159,7 @@ export function PersonalDetailsForm({
           </div>
         </div>
       </form>
+      </div>
     </FormProvider>
   );
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useConversations } from "../hooks/useConversations";
+import { useCurrentUserProfile } from "@/features/auth/hooks/useCurrentUserProfile";
 import { ConversationListItem } from "./ConversationListItem";
 import { CurrentUserBar } from "./CurrentUserBar";
 import { NewConversationModal } from "./NewConversationModal";
@@ -13,6 +14,7 @@ export function ConversationSidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const { data: conversations, isLoading } = useConversations();
+  const { data: profile } = useCurrentUserProfile();
   const [activeTab, setActiveTab] = useState<TabFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [isNewConversationOpen, setIsNewConversationOpen] = useState(false);
@@ -143,6 +145,7 @@ export function ConversationSidebar() {
               conversation={c}
               isActive={c.id === activeConversationId}
               onClick={() => router.push(`/${c.id}`)}
+              currentUserId={profile?.id}
             />
           ))
         )}

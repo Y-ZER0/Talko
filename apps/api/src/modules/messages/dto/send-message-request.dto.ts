@@ -17,7 +17,8 @@ export class SendMessageRequestDto {
   @IsUUID()
   parentId?: string;
 
-  @IsUUID()
+  @IsString()
+  @IsNotEmpty()
   clientId!: string;
 
   @IsOptional()

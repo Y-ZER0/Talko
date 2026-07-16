@@ -14,6 +14,11 @@ export const conversationService = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
+  getConversation: (conversationId: string, token: string) =>
+    apiClient<ConversationDto>(`/conversations/${conversationId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
   createConversation: (data: CreateConversationRequest, token: string) =>
     apiClient<CreateConversationResponseDto>("/conversations", {
       method: "POST",

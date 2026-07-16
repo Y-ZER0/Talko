@@ -17,16 +17,16 @@ export class Message {
   @Column({ name: "sender_id" })
   senderId!: string;
 
-  @Column({ name: "parent_id", nullable: true })
+  @Column({ name: "parent_id", nullable: true, type: "uuid" })
   parentId!: string | null;
 
   @Column({ nullable: true, type: "text" })
   content!: string | null;
 
-  @Column({ name: "media_url", nullable: true })
+  @Column({ name: "media_url", nullable: true, type: "varchar" })
   mediaUrl!: string | null;
 
-  @Column({ name: "media_type", nullable: true })
+  @Column({ name: "media_type", nullable: true, type: "varchar" })
   mediaType!: string | null;
 
   @Column({ name: "is_deleted", default: false })
@@ -35,7 +35,7 @@ export class Message {
   @Column({ name: "client_id" })
   clientId!: string;
 
-  @Column({ name: "edited_at", nullable: true })
+  @Column({ name: "edited_at", nullable: true, type: "timestamp" })
   editedAt!: Date | null;
 
   @CreateDateColumn({ name: "created_at" })

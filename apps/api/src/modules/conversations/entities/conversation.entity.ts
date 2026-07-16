@@ -15,7 +15,7 @@ export class Conversation {
   @Column({ name: "is_group" })
   isGroup!: boolean;
 
-  @Column({ name: "group_name", nullable: true })
+  @Column({ name: "group_name", nullable: true, type: "varchar" })
   groupName!: string | null;
 
   @CreateDateColumn({ name: "created_at" })

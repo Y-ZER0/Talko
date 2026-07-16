@@ -6,15 +6,19 @@ import { useSendMessage } from "../hooks/useSendMessage";
 interface MessageComposerProps {
   conversationId: string;
   disabled?: boolean;
+  displayName?: string;
+  currentUserId?: string;
 }
 
 export function MessageComposer({
   conversationId,
   disabled = false,
+  displayName = "Chat",
+  currentUserId,
 }: MessageComposerProps) {
   const [content, setContent] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const sendMessage = useSendMessage(conversationId);
+  const sendMessage = useSendMessage(conversationId, currentUserId);
 
   const handleSubmit = useCallback(() => {
     const trimmed = content.trim();
@@ -97,7 +101,7 @@ export function MessageComposer({
             value={content}
             onChange={handleInput}
             onKeyDown={handleKeyDown}
-            placeholder="Message Product..."
+            placeholder={`Message ${displayName}...`}
             disabled={disabled || sendMessage.isPending}
             rows={1}
             className="w-full px-4 py-2.5 bg-surface-muted border-0 rounded-xl text-sm text-text placeholder:text-text-muted resize-none outline-none focus:ring-2 focus:ring-primary-500/20 disabled:opacity-50"

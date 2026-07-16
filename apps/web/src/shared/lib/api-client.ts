@@ -5,11 +5,11 @@ export async function apiClient<T>(
   options: RequestInit = {},
 ): Promise<T> {
   const res = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
     headers: {
       "Content-Type": "application/json",
       ...options.headers,
     },
-    ...options,
   });
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: res.statusText }));

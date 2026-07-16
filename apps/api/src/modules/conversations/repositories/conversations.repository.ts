@@ -52,21 +52,17 @@ export class ConversationsRepository {
   }
 
   async getLastMessages(conversationIds: string[]): Promise<any[]> {
-    return this.repo.manager
-      .createQueryBuilder()
-      .select(
-        "DISTINCT ON (m.conversation_id) m.conversation_id",
-        "conversationId",
-      )
-      .addSelect("m.content", "content")
-      .addSelect("m.created_at", "createdAt")
-      .addSelect("m.sender_id", "senderId")
-      .from("messages", "m")
-      .where("m.conversation_id IN (:...convIds)", {
-        convIds: conversationIds,
-      })
-      .orderBy("m.conversation_id")
-      .addOrderBy("m.created_at", "DESC")
-      .getRawMany();
+    if (conversationIds.length === 0) return [];
+    return this.repo.manager.query(
+      `SELECT DISTINCT ON (m.conversation_id)
+        m.conversation_id AS "conversationId",
+        m.content AS "content",
+        m.created_at AS "createdAt",
+        m.sender_id AS "senderId"
+       FROM messages m
+       WHERE m.conversation_id = ANY($1::uuid[])
+       ORDER BY m.conversation_id ASC, m.created_at DESC`,
+      [conversationIds],
+    );
   }
 }

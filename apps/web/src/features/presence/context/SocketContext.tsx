@@ -51,6 +51,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       setSocket(s);
 
       s.on("connect", () => {
+        console.log("[socket] connected", s.id);
         if (cancelled) return;
         setIsConnected(true);
         pendingJoins.current.forEach((roomId) => {
@@ -58,11 +59,13 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         });
       });
 
-      s.on("disconnect", () => {
+      s.on("disconnect", (reason) => {
+        console.warn("[socket] disconnected, reason:", reason);
         if (!cancelled) setIsConnected(false);
       });
 
-      s.on("connect_error", () => {
+      s.on("connect_error", (err) => {
+        console.error("[socket] connect_error:", err.message, err);
         if (!cancelled) setIsConnected(false);
       });
 

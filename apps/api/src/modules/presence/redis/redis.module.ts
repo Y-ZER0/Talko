@@ -11,9 +11,14 @@ import Redis from "ioredis";
       useFactory: (config: ConfigService) => {
         const url = config.get<string>("app.redisUrl");
         if (!url) {
-          throw new Error("REDIS_URL is not configured");
+          console.warn("REDIS_URL not configured — Redis features disabled");
+          return null;
         }
-        return new Redis(url);
+        const client = new Redis(url);
+        client.on("error", () => {
+          console.warn("Redis connection failed — Redis features unavailable");
+        });
+        return client;
       },
     },
   ],

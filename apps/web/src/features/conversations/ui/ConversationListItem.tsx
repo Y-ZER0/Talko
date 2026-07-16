@@ -12,14 +12,16 @@ interface ConversationListItemProps {
   conversation: ConversationDto;
   isActive?: boolean;
   onClick?: () => void;
+  currentUserId?: string;
 }
 
 export function ConversationListItem({
   conversation,
   isActive = false,
   onClick,
+  currentUserId,
 }: ConversationListItemProps) {
-  const displayName = getDisplayName(conversation);
+  const displayName = getDisplayName(conversation, currentUserId);
   const preview = getLastMessagePreview(conversation);
   const timestamp = conversation.lastMessage
     ? formatTimestamp(conversation.lastMessage.createdAt)

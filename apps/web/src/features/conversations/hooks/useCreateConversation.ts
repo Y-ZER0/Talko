@@ -34,6 +34,7 @@ export function useCreateConversation() {
           return [newConversation as ConversationDto, ...old];
         },
       );
+      queryClient.invalidateQueries({ queryKey: conversationKeys.list() });
     },
   });
 }

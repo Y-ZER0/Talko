@@ -5,16 +5,39 @@
     "jsx": "preserve",
     "declaration": false,
     "declarationMap": false,
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "target": "ES2017",
-    "plugins": [{ "name": "next" }],
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@repo/shared": ["../../packages/shared/src"]
-    }
+      "@/*": [
+        "./src/*"
+      ],
+      "@repo/shared": [
+        "../../packages/shared/src"
+      ]
+    },
+    "allowJs": true,
+    "noEmit": true,
+    "incremental": true,
+    "isolatedModules": true
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

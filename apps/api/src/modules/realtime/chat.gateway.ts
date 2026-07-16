@@ -8,6 +8,7 @@ import {
   MessageBody,
 } from "@nestjs/websockets";
 import { ConfigService } from "@nestjs/config";
+import { Logger } from "@nestjs/common";
 import { verifyToken, clerkClient } from "@clerk/clerk-sdk-node";
 import { Server, Socket } from "socket.io";
 import { SocketEvent, type SendMessageEventPayload } from "@repo/shared";
@@ -18,6 +19,7 @@ import { UsersService } from "../users/users.service";
   cors: { origin: "*", credentials: true },
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  private readonly logger = new Logger(ChatGateway.name);
   @WebSocketServer() server!: Server;
 
   constructor(
@@ -30,12 +32,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const token = socket.handshake.auth.token;
       if (!token) {
+        this.logger.warn("connection rejected: no token");
         socket.disconnect();
         return;
       }
 
       const secretKey = this.configService.get<string>("app.clerkSecretKey");
       if (!secretKey) {
+        this.logger.error("connection rejected: clerkSecretKey missing in config");
         socket.disconnect();
         return;
       }
@@ -57,7 +61,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       socket.data.userId = user.id;
-    } catch {
+      socket.join(`user:${user.id}`);
+    } catch (err) {
+      this.logger.error("connection rejected: token verification failed", err);
       socket.disconnect();
     }
   }
@@ -101,7 +107,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       socket.broadcast
         .to(payload.conversationId)
         .emit(SocketEvent.MESSAGE_NEW, message);
-    } catch {
+    } catch (err) {
+      this.logger.error(`handleMessage failed for clientId=${payload?.clientId}`, err);
       socket.emit(SocketEvent.ERROR, { message: "Failed to send message" });
     }
   }

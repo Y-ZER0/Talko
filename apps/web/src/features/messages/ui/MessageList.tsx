@@ -2,73 +2,29 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@clerk/nextjs";
+import { useQueryClient } from "@tanstack/react-query";
+import type { InfiniteData } from "@tanstack/react-query";
 import { useMessages } from "../hooks/useMessages";
+import { useSocket } from "@/features/presence/hooks/useSocket";
+import { messageKeys } from "../hooks/messageKeys";
 import { MessageBubble } from "./MessageBubble";
-import type { MessageDto } from "@repo/shared";
+import {
+  formatDateSeparator,
+  shouldShowDateSeparator,
+  shouldShowSenderName,
+} from "../lib/message-helpers";
+import { SocketEvent } from "@repo/shared";
+import type { MessageDto, MessagesCursorResponse } from "@repo/shared";
 
 interface MessageListProps {
   conversationId: string;
   currentUserId?: string;
 }
 
-function formatDateSeparator(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
-  if (messageDate.getTime() === today.getTime()) {
-    return "TODAY";
-  }
-
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (messageDate.getTime() === yesterday.getTime()) {
-    return "YESTERDAY";
-  }
-
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).toUpperCase();
-}
-
-function shouldShowDateSeparator(
-  current: MessageDto,
-  previous: MessageDto | undefined,
-): boolean {
-  if (!previous) return true;
-
-  const currentDate = new Date(current.createdAt);
-  const previousDate = new Date(previous.createdAt);
-
-  return (
-    currentDate.getFullYear() !== previousDate.getFullYear() ||
-    currentDate.getMonth() !== previousDate.getMonth() ||
-    currentDate.getDate() !== previousDate.getDate()
-  );
-}
-
-function shouldShowSenderName(
-  current: MessageDto,
-  previous: MessageDto | undefined,
-  isOwn: boolean,
-): boolean {
-  if (isOwn) return false;
-  if (!previous) return true;
-  if (previous.senderId !== current.senderId) return true;
-
-  const currentDate = new Date(current.createdAt);
-  const previousDate = new Date(previous.createdAt);
-  const timeDiff = currentDate.getTime() - previousDate.getTime();
-  const fiveMinutes = 5 * 60 * 1000;
-
-  return timeDiff > fiveMinutes;
-}
-
 export function MessageList({ conversationId, currentUserId }: MessageListProps) {
   const { getToken, userId } = useAuth();
+  const queryClient = useQueryClient();
+  const { socket } = useSocket();
   const {
     data,
     isLoading,
@@ -86,6 +42,7 @@ export function MessageList({ conversationId, currentUserId }: MessageListProps)
 
   const containerRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const initialLoadDone = useRef(false);
 
   const scrollToBottom = useCallback(() => {
     if (containerRef.current) {
@@ -94,10 +51,11 @@ export function MessageList({ conversationId, currentUserId }: MessageListProps)
   }, []);
 
   useEffect(() => {
-    if (!isLoading && !isFetchingNextPage) {
+    if (!isLoading && !initialLoadDone.current) {
+      initialLoadDone.current = true;
       scrollToBottom();
     }
-  }, [isLoading, isFetchingNextPage, scrollToBottom]);
+  }, [isLoading, scrollToBottom]);
 
   useEffect(() => {
     if (!sentinelRef.current || !hasNextPage) return;
@@ -118,6 +76,55 @@ export function MessageList({ conversationId, currentUserId }: MessageListProps)
 
     return () => observer.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleMessageAck = (payload: { clientId: string; message: MessageDto }) => {
+      queryClient.setQueryData<InfiniteData<MessagesCursorResponse>>(
+        messageKeys.list(conversationId),
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              data: page.data.map((msg) =>
+                msg.clientId === payload.clientId ? payload.message : msg,
+              ),
+            })),
+          };
+        },
+      );
+    };
+
+    const handleNewMessage = (message: MessageDto) => {
+      if (message.senderId === effectiveUserId) return;
+      queryClient.setQueryData<InfiniteData<MessagesCursorResponse>>(
+        messageKeys.list(conversationId),
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page, index) => {
+              if (index === 0) {
+                if (page.data.some((m) => m.id === message.id || m.clientId === message.clientId)) return page;
+                return { ...page, data: [...page.data, message] };
+              }
+              return page;
+            }),
+          };
+        },
+      );
+    };
+
+    socket.on(SocketEvent.MESSAGE_ACK, handleMessageAck);
+    socket.on(SocketEvent.MESSAGE_NEW, handleNewMessage);
+    return () => {
+      socket.off(SocketEvent.MESSAGE_ACK, handleMessageAck);
+      socket.off(SocketEvent.MESSAGE_NEW, handleNewMessage);
+    };
+  }, [socket, conversationId, queryClient, effectiveUserId]);
 
   if (isLoading) {
     return (

@@ -106,6 +106,7 @@ function DirectMessageForm({
   } = methods;
 
   const onSubmit = (data: DirectMessageFormData) => {
+    if (isPending) return;
     mutate(
       { type: "direct", participantId: data.participantId },
       {
@@ -164,6 +165,7 @@ function GroupChatForm({
   } = methods;
 
   const onSubmit = (data: GroupChatFormData) => {
+    if (isPending) return;
     const ids = data.participantIds
       .split(",")
       .map((s) => s.trim())

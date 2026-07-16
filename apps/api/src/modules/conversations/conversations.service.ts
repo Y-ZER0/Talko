@@ -3,11 +3,15 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from "@nestjs/common";
 import { Conversation } from "./entities/conversation.entity";
 import { CreateConversationRequestDto } from "./dto/create-conversation-request.dto";
 import { ConversationsRepository } from "./repositories/conversations.repository";
 import { ConversationMembersRepository } from "./repositories/conversation-members.repository";
+import { ChatGateway } from "../realtime/chat.gateway";
+import { SocketEvent } from "@repo/shared";
 import type {
   ConversationDto,
   ConversationMemberWithUserDto,
@@ -18,6 +22,8 @@ export class ConversationsService {
   constructor(
     private readonly conversationsRepository: ConversationsRepository,
     private readonly memberRepository: ConversationMembersRepository,
+    @Inject(forwardRef(() => ChatGateway))
+    private readonly chatGateway: ChatGateway,
   ) {}
 
   async create(
@@ -69,9 +75,15 @@ export class ConversationsService {
       },
     ]);
 
-    return this.conversationsRepository.findByIdWithMembers(
+    const result = await this.conversationsRepository.findByIdWithMembers(
       conversation.id,
-    ) as Promise<Conversation>;
+    ) as Conversation;
+
+    this.chatGateway.server
+      .to(`user:${participantId}`)
+      .emit(SocketEvent.CONVERSATION_NEW, this.toCreateConversationDto(result));
+
+    return result;
   }
 
   private async createGroup(
@@ -93,9 +105,35 @@ export class ConversationsService {
       })),
     );
 
-    return this.conversationsRepository.findByIdWithMembers(
+    const result = await this.conversationsRepository.findByIdWithMembers(
       conversation.id,
-    ) as Promise<Conversation>;
+    ) as Conversation;
+
+    for (const userId of allIds) {
+      if (userId !== currentUserId) {
+        this.chatGateway.server
+          .to(`user:${userId}`)
+          .emit(SocketEvent.CONVERSATION_NEW, this.toCreateConversationDto(result));
+      }
+    }
+
+    return result;
+  }
+
+  async getConversation(
+    userId: string,
+    conversationId: string,
+  ): Promise<ConversationDto> {
+    const conversation =
+      await this.conversationsRepository.findByIdWithMembers(conversationId);
+    if (!conversation)
+      throw new NotFoundException("Conversation not found");
+
+    const isMember = conversation.members.some((m) => m.userId === userId);
+    if (!isMember)
+      throw new NotFoundException("Conversation not found");
+
+    return this.toConversationDto(conversation, null);
   }
 
   async getMyConversations(userId: string): Promise<ConversationDto[]> {

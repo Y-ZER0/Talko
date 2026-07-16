@@ -21,7 +21,7 @@ export class MessageReceipt {
   @Column({ default: "delivered" })
   status!: string;
 
-  @Column({ name: "read_at", nullable: true })
+  @Column({ name: "read_at", nullable: true, type: "timestamp" })
   readAt!: Date | null;
 
   @CreateDateColumn({ name: "created_at" })

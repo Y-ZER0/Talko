@@ -13,8 +13,7 @@
     "baseUrl": ".",
     "paths": {
       "@repo/shared": ["packages/shared/src"]
-    },
-    "ignoreDeprecations": "5.0"
+    }
   },
   "exclude": ["node_modules", "dist"]
 }

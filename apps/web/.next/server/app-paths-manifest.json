@@ -1,0 +1,5 @@
+{
+  "/(protected)/(chat)/page": "app/(protected)/(chat)/page.js",
+  "/(protected)/(chat)/[conversationId]/page": "app/(protected)/(chat)/[conversationId]/page.js",
+  "/(protected)/account/profile/page": "app/(protected)/account/profile/page.js"
+}
