@@ -241,17 +241,25 @@ The provided schema covers 1–4, 7 (partially), and 10 (partially). It does **n
 // -- Extends `conversation_members`: mute (shown in the prototype's right-panel "MUTE NOTIFICATIONS") --
 // ALTER TABLE conversation_members ADD COLUMN muted_until timestamp NULL;
 
-// -- New: multiple attachments per message (v1 schema allows exactly one media_url/media_type pair) --
-Table message_attachments {
-  id uuid [pk, default: `uuid_generate_v4()`]
-  message_id uuid [not null]
-  media_url varchar [not null]
-  media_type varchar [not null, note: 'image, video, audio, document']
-  thumbnail_url varchar [null]
-  file_size_bytes int [null]
-  created_at timestamp [default: `now()`]
-}
-Ref: message_attachments.message_id > messages.id [delete: cascade]
+    // -- New: multiple attachments per message (v1 schema allows exactly one media_url/media_type pair) --
+    // -- Phase 8 built this. `messages.media_url`/`media_type` columns are DEPRECATED --
+    // -- new messages use `message_attachments` only. The old columns remain for backward compat only. --
+    Table message_attachments {
+      id uuid [pk, default: `uuid_generate_v4()`]
+      message_id uuid [not null]
+      media_url varchar [not null]
+      media_type varchar [not null, note: 'image, video, audio, document']
+      thumbnail_url varchar [null]
+      file_size_bytes int [null]
+      created_at timestamp [default: `now()`]
+    }
+    Ref: message_attachments.message_id > messages.id [delete: cascade]
+
+    // -- Index for efficient querying of shared media per conversation --
+    // CREATE INDEX IDX_message_attachments_message ON message_attachments (message_id);
+
+    // -- Media upload endpoint: POST /media/upload (Multer memoryStorage → ImageKit) --
+    // -- returns { url, fileId, mediaType } -- message referencing it is emitted AFTER upload resolves --
 
 // -- New: FCM device targeting (feature 9 is unbuildable without this) --
 Table device_tokens {
@@ -280,7 +288,7 @@ Ref: blocked_contacts.blocked_id > users.id [delete: cascade]
 
 `read_receipts_enabled` isn't cosmetic — if false, the receipts flow in Phase 7 must skip writing `message_receipts.status = 'read'` for that user entirely, not just hide the tick client-side, or you're lying to the UI about a privacy toggle that does nothing server-side.
 
-Decide in the ARCHITECT step for Phase 8 whether `messages.media_url`/`media_type` are deprecated in favor of `message_attachments` entirely, or kept for the single-attachment fast path. Don't leave both half-implemented — that's exactly the ambiguity `code-standards.md` Hard Rule 16 exists to prevent.
+`messages.media_url`/`media_type` are **deprecated** since Phase 8 — all new attachments go into `message_attachments`. The old columns remain nullable for backward compatibility with messages created before Phase 8. Do not write new code that populates them.
 
 ### Server State Flow (mirrors the reference TanStack Query pattern exactly)
 
@@ -308,11 +316,20 @@ Sender: useSendMessage() optimistic mutation
 ### Presence Flow (Redis — never Postgres)
 
 ```
-socket connect → PresenceService.setOnline(userId, socketId) → Redis SET user:{id}:status online, EX heartbeatTTL
-                → Redis SADD user:{id}:sockets {socketId}  (support multi-tab/multi-device)
-ping/pong every N seconds → refresh TTL
-socket disconnect → SREM socket from set → if set empty → SET user:{id}:status offline → broadcast presence:update
+socket connect → PresenceGateway verifies JWT → PresenceService.setOnline(userId)
+               → Redis SET user:{id}:status online, EX heartbeatTTL (60s)
+               → Redis SET user:{id}:lastSeen <ISO timestamp>
+               → global broadcast presence:update { userId, status: "online" }
+
+client sends "ping" every 30s → PresenceGateway.handlePing → refresh TTL → emit "pong"
+
+socket disconnect → PresenceService.setOffline(userId)
+                  → Redis SET user:{id}:status offline
+                  → Redis SET user:{id}:lastSeen <ISO timestamp>
+                  → global broadcast presence:update { userId, status: "offline", lastSeen }
 ```
+
+Application-level ping/pong refreshes the Redis TTL so stale connections expire (60s TTL, 30s heartbeat interval). This catches browser tab crashes and network drops where the disconnect event doesn't fire cleanly. Single-device per user (no multi-tab socket tracking in this version).
 
 ## Authentication & Core Patterns
 
@@ -329,6 +346,7 @@ socket disconnect → SREM socket from set → if set empty → SET user:{id}:st
 4. Socket.io room name == `conversation_id` (uuid), always. No ad hoc room naming.
 5. Every socket event payload type is defined once in `packages/shared/src/events` and imported by both apps.
 6. TypeORM entities never serialize past the service layer — `toDto()` is mandatory, same as the reference plan's Hard Rule 10.
-7. Media upload (Multer) always completes and returns a URL **before** the message referencing it is emitted over the socket — never emit a message pointing at an in-flight upload.
+7. Media upload (Multer) always completes and returns a URL **before** the message referencing it is emitted over the socket — never emit a message pointing at an in-flight upload. Attachments are stored in `message_attachments`; `messages.media_url`/`media_type` are deprecated since Phase 8.
 8. Any schema change required by a feature gets written into this file's DBML block in the same session, not left implicit in a migration file only.
-9. Push notifications (FCM) are suppressed if the recipient has an active socket connection in that conversation's room — check presence before sending, or you'll double-notify.
+9. Push notifications (FCM) are suppressed if the recipient has an active socket connection in that conversation's room — check room membership via `server.in(conversationId).fetchSockets()` before sending, or you'll double-notify. PresenceService (Redis) alone is insufficient — a user can be online but in a different conversation.
+10. Device tokens are stored in the `device_tokens` table, keyed by unique `fcm_token`. The FcmService wraps firebase-admin v14 modular API (`firebase-admin/app` and `firebase-admin/messaging`). Invalid tokens detected during send (invalid/not-registered) are automatically removed from the table.

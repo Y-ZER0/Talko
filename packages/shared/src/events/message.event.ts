@@ -1,10 +1,17 @@
 import { MessageDto } from "../dtos/message.dto";
 
+export interface AttachmentPayload {
+  mediaUrl: string;
+  mediaType: string;
+  fileSize?: number;
+}
+
 export interface SendMessageEventPayload {
   conversationId: string;
   content: string | null;
   parentId?: string | null;
   clientId: string;
+  attachments?: AttachmentPayload[];
 }
 
 export interface MessageAckEventPayload {

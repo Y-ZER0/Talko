@@ -51,6 +51,20 @@ export class ConversationsRepository {
       .getMany();
   }
 
+  async deleteCascaded(id: string): Promise<void> {
+    await this.repo.manager.query(
+      `DELETE FROM message_reactions WHERE message_id IN (SELECT id FROM messages WHERE conversation_id = $1)`,
+      [id],
+    );
+    await this.repo.manager.query(
+      `DELETE FROM message_receipts WHERE message_id IN (SELECT id FROM messages WHERE conversation_id = $1)`,
+      [id],
+    );
+    await this.repo.manager.query(`DELETE FROM messages WHERE conversation_id = $1`, [id]);
+    await this.repo.manager.query(`DELETE FROM conversation_members WHERE conversation_id = $1`, [id]);
+    await this.repo.manager.query(`DELETE FROM conversations WHERE id = $1`, [id]);
+  }
+
   async getLastMessages(conversationIds: string[]): Promise<any[]> {
     if (conversationIds.length === 0) return [];
     return this.repo.manager.query(
@@ -64,5 +78,32 @@ export class ConversationsRepository {
        ORDER BY m.conversation_id ASC, m.created_at DESC`,
       [conversationIds],
     );
+  }
+
+  async countUnread(
+    conversationId: string,
+    userId: string,
+    lastReadAt: Date | null,
+  ): Promise<number> {
+    if (!lastReadAt) {
+      const result = await this.repo.manager.query(
+        `SELECT COUNT(*)::int AS cnt
+         FROM messages
+         WHERE conversation_id = $1
+           AND sender_id != $2`,
+        [conversationId, userId],
+      );
+      return result[0]?.cnt ?? 0;
+    }
+
+    const result = await this.repo.manager.query(
+      `SELECT COUNT(*)::int AS cnt
+       FROM messages
+       WHERE conversation_id = $1
+         AND created_at > $2
+         AND sender_id != $3`,
+      [conversationId, lastReadAt, userId],
+    );
+    return result[0]?.cnt ?? 0;
   }
 }

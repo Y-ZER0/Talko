@@ -1,12 +1,11 @@
 import { apiClient } from "@/shared/lib/api-client";
-import type { MessageDto, MessagesCursorResponse } from "@repo/shared";
+import type { MessageDto, MessagesCursorResponse, AttachmentPayload } from "@repo/shared";
 
 export interface SendMessageRequest {
   content?: string;
   parentId?: string;
   clientId: string;
-  mediaUrl?: string;
-  mediaType?: string;
+  attachments?: AttachmentPayload[];
 }
 
 export const messageService = {

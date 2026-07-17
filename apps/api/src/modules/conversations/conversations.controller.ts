@@ -63,4 +63,20 @@ export class ConversationsController {
       memberUserId,
     );
   }
+
+  @Delete(":id/leave")
+  async leave(
+    @CurrentUser() user: User,
+    @Param("id") conversationId: string,
+  ) {
+    await this.conversationsService.leave(conversationId, user.id);
+  }
+
+  @Delete(":id")
+  async delete(
+    @CurrentUser() user: User,
+    @Param("id") conversationId: string,
+  ) {
+    await this.conversationsService.deleteConversation(conversationId, user.id);
+  }
 }

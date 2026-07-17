@@ -1,20 +1,6 @@
 "use client";
 
-import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
-
-interface SettingsTopBarProps {
-  hasUnsavedChanges?: boolean;
-  onSave?: () => void;
-  isSaving?: boolean;
-}
-
-export function SettingsTopBar({
-  hasUnsavedChanges = false,
-  onSave,
-  isSaving = false,
-}: SettingsTopBarProps) {
-  const { user } = useCurrentUser();
-
+export function SettingsTopBar() {
   return (
     <header className="flex items-center justify-between px-6 py-4 bg-bg border-b border-border">
       <div className="flex items-center gap-3">
@@ -62,16 +48,6 @@ export function SettingsTopBar({
           </p>
         </div>
       </div>
-
-      {hasUnsavedChanges && (
-        <button
-          onClick={onSave}
-          disabled={isSaving}
-          className="bg-primary-500 text-text-inverse font-semibold text-sm px-5 py-2.5 rounded-full border-none cursor-pointer hover:bg-primary-600 disabled:opacity-70 disabled:cursor-not-allowed transition-colors"
-        >
-          {isSaving ? "Saving..." : "Save changes"}
-        </button>
-      )}
     </header>
   );
 }

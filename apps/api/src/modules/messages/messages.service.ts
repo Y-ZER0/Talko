@@ -1,14 +1,13 @@
 import {
   Injectable,
   NotFoundException,
-  ConflictException,
-  BadRequestException,
 } from "@nestjs/common";
 import { Message } from "./entities/message.entity";
+import { MessageAttachment } from "./entities/message-attachment.entity";
 import { SendMessageRequestDto } from "./dto/send-message-request.dto";
 import { MessagesRepository } from "./repositories/messages.repository";
 import { ConversationMembersRepository } from "../conversations/repositories/conversation-members.repository";
-import type { MessageDto } from "@repo/shared";
+import type { MessageDto, ReceiptUpdateEventPayload, MessageAttachmentDto } from "@repo/shared";
 
 @Injectable()
 export class MessagesService {
@@ -36,14 +35,17 @@ export class MessagesService {
     );
     if (existing) return this.toDto(existing);
 
-    const message = await this.messagesRepository.save({
+    const message = await this.messagesRepository.saveWithAttachments({
       conversationId,
       senderId,
       content: dto.content ?? null,
       parentId: dto.parentId ?? null,
-      mediaUrl: dto.mediaUrl ?? null,
-      mediaType: dto.mediaType ?? null,
       clientId: dto.clientId,
+      attachments: dto.attachments?.map((a) => ({
+        mediaUrl: a.mediaUrl,
+        mediaType: a.mediaType,
+        fileSizeBytes: a.fileSize ?? null,
+      })),
     });
 
     return this.toDto(message);
@@ -82,6 +84,57 @@ export class MessagesService {
     return { data, nextCursor, hasMore };
   }
 
+  async markAsRead(
+    userId: string,
+    conversationId: string,
+    messageIds: string[],
+  ): Promise<Record<string, ReceiptUpdateEventPayload[]>> {
+    const isMember = await this.memberRepository.findByConversationAndUser(
+      conversationId,
+      userId,
+    );
+    if (!isMember)
+      throw new NotFoundException("Conversation not found");
+
+    await this.messagesRepository.upsertReceipts(messageIds, userId);
+
+    const maxCreatedAt = await this.messagesRepository.findMaxCreatedAt(messageIds);
+    if (maxCreatedAt) {
+      await this.memberRepository.updateLastReadAt(
+        conversationId,
+        userId,
+        maxCreatedAt,
+      );
+    }
+
+    const senders = await this.messagesRepository.findMessageSenders(messageIds);
+
+    const grouped: Record<string, ReceiptUpdateEventPayload[]> = {};
+    for (const { messageId, senderId } of senders) {
+      if (!grouped[senderId]) grouped[senderId] = [];
+      grouped[senderId].push({
+        messageId,
+        userId,
+        status: "read",
+        readAt: new Date().toISOString(),
+      });
+    }
+
+    return grouped;
+  }
+
+  private attachmentToDto(attachment: MessageAttachment): MessageAttachmentDto {
+    return {
+      id: attachment.id,
+      messageId: attachment.messageId,
+      mediaUrl: attachment.mediaUrl,
+      mediaType: attachment.mediaType,
+      thumbnailUrl: attachment.thumbnailUrl ?? null,
+      fileSizeBytes: attachment.fileSizeBytes ?? null,
+      createdAt: attachment.createdAt.toISOString(),
+    };
+  }
+
   toDto(message: Message): MessageDto {
     return {
       id: message.id,
@@ -91,6 +144,7 @@ export class MessagesService {
       content: message.content ?? null,
       mediaUrl: message.mediaUrl ?? null,
       mediaType: message.mediaType ?? null,
+      attachments: (message.attachments ?? []).map((a) => this.attachmentToDto(a)),
       isDeleted: message.isDeleted,
       createdAt: message.createdAt.toISOString(),
       updatedAt: message.updatedAt.toISOString(),

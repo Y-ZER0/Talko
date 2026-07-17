@@ -32,9 +32,21 @@ export function useConversations() {
       queryClient.invalidateQueries({ queryKey: conversationKeys.list() });
     };
 
+    const handleLeaveConversation = () => {
+      queryClient.invalidateQueries({ queryKey: conversationKeys.list() });
+    };
+
+    const handleDeletedConversation = () => {
+      queryClient.invalidateQueries({ queryKey: conversationKeys.list() });
+    };
+
     socket.on(SocketEvent.CONVERSATION_NEW, handleNewConversation);
+    socket.on(SocketEvent.CONVERSATION_LEAVE, handleLeaveConversation);
+    socket.on(SocketEvent.CONVERSATION_DELETED, handleDeletedConversation);
     return () => {
       socket.off(SocketEvent.CONVERSATION_NEW, handleNewConversation);
+      socket.off(SocketEvent.CONVERSATION_LEAVE, handleLeaveConversation);
+      socket.off(SocketEvent.CONVERSATION_DELETED, handleDeletedConversation);
     };
   }, [socket, queryClient]);
 

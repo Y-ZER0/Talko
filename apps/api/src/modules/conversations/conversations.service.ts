@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  ForbiddenException,
   Inject,
   forwardRef,
 } from "@nestjs/common";
@@ -133,7 +134,7 @@ export class ConversationsService {
     if (!isMember)
       throw new NotFoundException("Conversation not found");
 
-    return this.toConversationDto(conversation, null);
+    return this.toConversationDto(conversation, null, userId);
   }
 
   async getMyConversations(userId: string): Promise<ConversationDto[]> {
@@ -150,8 +151,10 @@ export class ConversationsService {
       lastMessages.map((lm: any) => [lm.conversationId, lm]),
     );
 
-    return conversations.map((c) =>
-      this.toConversationDto(c, lastMessageMap.get(c.id) ?? null),
+    return Promise.all(
+      conversations.map((c) =>
+        this.toConversationDto(c, lastMessageMap.get(c.id) ?? null, userId),
+      ),
     );
   }
 
@@ -223,10 +226,71 @@ export class ConversationsService {
     await this.memberRepository.remove(member);
   }
 
-  private toConversationDto(
+  async leave(
+    conversationId: string,
+    userId: string,
+  ): Promise<void> {
+    const conversation =
+      await this.conversationsRepository.findByIdWithMembers(conversationId);
+    if (!conversation)
+      throw new NotFoundException("Conversation not found");
+
+    const member = conversation.members.find((m) => m.userId === userId);
+    if (!member) throw new NotFoundException("You are not a member of this conversation");
+
+    await this.memberRepository.remove(member);
+
+    const remainingMemberIds = conversation.members
+      .filter((m) => m.userId !== userId)
+      .map((m) => m.userId);
+
+    for (const id of remainingMemberIds) {
+      this.chatGateway.server
+        .to(`user:${id}`)
+        .emit(SocketEvent.CONVERSATION_LEAVE, { conversationId, userId });
+    }
+  }
+
+  async deleteConversation(
+    conversationId: string,
+    userId: string,
+  ): Promise<void> {
+    const conversation =
+      await this.conversationsRepository.findByIdWithMembers(conversationId);
+    if (!conversation)
+      throw new NotFoundException("Conversation not found");
+    if (!conversation.isGroup)
+      throw new BadRequestException("Cannot delete a 1-on-1 conversation");
+
+    const member = conversation.members.find((m) => m.userId === userId);
+    if (!member)
+      throw new NotFoundException("You are not a member of this conversation");
+    if (member.role !== "admin")
+      throw new ForbiddenException("Only admins can delete the conversation");
+
+    await this.conversationsRepository.deleteCascaded(conversationId);
+
+    const allMemberIds = conversation.members.map((m) => m.userId);
+    for (const id of allMemberIds) {
+      this.chatGateway.server
+        .to(`user:${id}`)
+        .emit(SocketEvent.CONVERSATION_DELETED, { conversationId });
+    }
+  }
+
+  private async toConversationDto(
     conversation: Conversation,
     lastMessageRaw: any,
-  ): ConversationDto {
+    userId: string,
+  ): Promise<ConversationDto> {
+    const member = conversation.members.find((m) => m.userId === userId);
+    const lastReadAt = member?.lastReadAt ?? null;
+    const unreadCount = await this.conversationsRepository.countUnread(
+      conversation.id,
+      userId,
+      lastReadAt,
+    );
+
     return {
       id: conversation.id,
       isGroup: conversation.isGroup,
@@ -251,7 +315,7 @@ export class ConversationsService {
           avatarUrl: m.user.avatarUrl ?? null,
         },
       })),
-      unreadCount: 0,
+      unreadCount,
     };
   }
 

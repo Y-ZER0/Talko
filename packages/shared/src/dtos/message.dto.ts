@@ -1,3 +1,5 @@
+import type { MessageAttachmentDto } from "./message-attachment.dto";
+
 export interface MessageDto {
   id: string;
   conversationId: string;
@@ -6,6 +8,7 @@ export interface MessageDto {
   content: string | null;
   mediaUrl: string | null;
   mediaType: string | null;
+  attachments: MessageAttachmentDto[];
   isDeleted: boolean;
   createdAt: string;
   updatedAt: string;

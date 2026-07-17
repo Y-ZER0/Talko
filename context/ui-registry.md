@@ -2,7 +2,7 @@
 
 Visual consistency patterns extracted from existing components. Every new component must match these patterns.
 
-Last updated: 2026-07-14
+Last updated: 2026-07-17
 
 ---
 
@@ -172,6 +172,26 @@ Last updated: 2026-07-14
 
 ---
 
+## PresenceDot (standalone)
+
+File: `features/presence/ui/PresenceDot.tsx`
+Last updated: 2026-07-17
+
+| Property         | Class                              |
+| ---------------- | ---------------------------------- |
+| Dot              | `inline-block rounded-full`        |
+| Online           | `bg-online`                        |
+| Offline          | `bg-text-muted`                    |
+| Sizes            | sm: `w-2 h-2`, md: `w-2.5 h-2.5`, lg: `w-3.5 h-3.5` |
+
+**Pattern notes:**
+- Standalone dot without border-surface cutout (not overlaid on avatar)
+- Colors match the Avatar presence dot pattern
+- Used in contexts where Avatar component is not present
+- Includes `aria-label` for accessibility
+
+---
+
 ## Primary Button
 
 Used in: SettingsTopBar (save), auth forms
@@ -252,9 +272,135 @@ These inline hex values bypass the design system and should be replaced:
 | File | Value | Should be |
 | --- | --- | --- |
 | `SettingsNav.tsx:22,38,60,79` | `stroke="#E8562E"` | Token reference (SVG stroke cannot use Tailwind) |
-| `SettingsNav.tsx:22,38,60,79` | `stroke="#8A8478"` | Token reference (SVG stroke cannot use Tailwind) |
+| `SettingsNav.tsx:22,38,60,79` | `stroke="#8A8478"` | Token reference |
 | `ProfileStatusField.tsx:62` | `stroke="#8A8478"` | Token reference |
 | `ProfileCoverBanner.tsx:18` | `linear-gradient(135deg, #E8562E, #C98F1E, #1C9BB5)` | Hardcoded gradient (acceptable — gradient cannot use Tailwind) |
 | `Avatar.tsx:14-23` | `ACCENT_HEX` array | Hardcoded (acceptable — used for inline `backgroundColor`) |
+| `NotificationPermissionPrompt.tsx:59` | `stroke="#E8562E"` | Token reference (SVG stroke cannot use Tailwind) |
 
 **Note:** SVG `stroke` attributes and CSS `linear-gradient` cannot use Tailwind classes. These hardcoded values are acceptable as they map directly to design tokens defined in `globals.css`.
+
+---
+
+## TypingIndicator
+
+File: `features/typing/ui/TypingIndicator.tsx`
+Last updated: 2026-07-17
+
+| Property         | Class                              |
+| ---------------- | ---------------------------------- |
+| Text             | `text-xs text-primary-500 italic truncate` |
+| Accessibility    | `aria-live="polite" role="status"` |
+
+**Pattern notes:**
+- Uses `text-primary-500` (accent color) to distinguish from normal message preview
+- Italic style signals ephemeral/transient state
+- `truncate` prevents long multi-user lists from overflowing
+- Always paired with `aria-live="polite"` for screen reader announcement
+- Replaces message preview in ConversationListItem when active
+
+---
+
+## ReadReceiptIcon
+
+File: `features/receipts/ui/ReadReceiptIcon.tsx`
+Last updated: 2026-07-17
+
+| Property         | Class                              |
+| ---------------- | ---------------------------------- |
+| Container        | `inline-flex items-center gap-0.5` |
+| Text — sent      | `font-mono text-[10px] tracking-label uppercase text-text-muted` |
+| Text — delivered | `font-mono text-[10px] tracking-label uppercase text-text-muted` |
+| Text — read      | `font-mono text-[10px] tracking-label uppercase text-primary-500` |
+| Timestamp        | `font-mono text-[10px] text-text-muted ml-0.5` |
+| Icons            | SVG checkmarks, `stroke="currentColor"`, strokeWidth 1.8 |
+| Single check     | 14×14px, one polyline |
+| Double check     | 18×14px, two overlapping polylines |
+
+**Pattern notes:**
+- Three states: sent (single check, muted), delivered (double check, muted), read (double check, primary-500)
+- Uses mono font + tracking-label + uppercase for status label — matches all-caps meta labels across the app
+- READ state uses `text-primary-500` (accent) to visually distinguish from delivered
+- Timestamp only shown in READ state, formatted as `h:mm A`
+- Icons use `currentColor` for stroke — inherits text color from parent span
+- Compact vertical footprint: fits alongside the message timestamp in a single row
+
+---
+
+## ToggleSwitch
+
+File: `shared/ui/components/ToggleSwitch.tsx`
+Last updated: 2026-07-17
+
+| Property         | Class                              |
+| ---------------- | ---------------------------------- |
+| Track — on       | `bg-primary-500`                   |
+| Track — off      | `bg-border`                        |
+| Track size       | `var(--toggle-track-width)` × `var(--toggle-track-height)` (44×24px) |
+| Track radius     | `rounded-full`                     |
+| Thumb            | `bg-white shadow-sm rounded-full`  |
+| Thumb size       | `20×20px`                          |
+| Thumb — on       | `translate-x-5`                    |
+| Thumb — off      | `translate-x-0.5`                  |
+| Focus ring       | `focus:ring-2 focus:ring-primary-500/20 focus:ring-offset-2 focus:ring-offset-surface` |
+| Disabled         | `disabled:opacity-50 disabled:cursor-not-allowed` |
+| Accessibility    | `role="switch"` `aria-checked`     |
+
+**Pattern notes:**
+- Uses `role="switch"` with `aria-checked` — never a `<div>` with click handler
+- Track dimensions from CSS custom properties defined in `globals.css`
+- Transition: `transition-colors duration-200` on track, `transition-transform duration-200` on thumb
+- `pointer-events-none` on thumb to prevent double-toggle
+
+---
+
+## NotificationsPanel (Settings)
+
+File: `features/settings/ui/NotificationsPanel.tsx`
+Last updated: 2026-07-17
+
+| Property         | Class                              |
+| ---------------- | ---------------------------------- |
+| Card background  | `bg-surface`                       |
+| Card radius      | `rounded-2xl`                      |
+| Card padding     | `p-6`                              |
+| Title            | `text-lg font-semibold text-text`  |
+| Subtitle         | `text-xs text-text-muted`          |
+| Toggle row       | `flex items-center justify-between py-4 border-b border-border last:border-b-0` |
+| Label            | `text-sm font-medium text-text`    |
+| Description      | `text-xs text-text-muted mt-0.5`   |
+| Save button      | Primary Button pattern             |
+| Error message    | `text-xs text-danger`              |
+| Loading spinner  | `w-6 h-6 border-[3px] border-border border-t-primary-500 rounded-full animate-spin` |
+
+**Pattern notes:**
+- Dirty-state gated save button — only appears when `isDirty` is true (per ui-rules.md)
+- Toggle rows separated by `border-b border-border` with `last:border-b-0`
+- Loading state uses same spinner pattern as profile page
+- Error state uses `text-danger` (same as form validation errors)
+
+---
+
+## NotificationPermissionPrompt (Floating Banner)
+
+File: `features/notifications/ui/NotificationPermissionPrompt.tsx`
+Last updated: 2026-07-17
+
+| Property         | Class                              |
+| ---------------- | ---------------------------------- |
+| Container        | `fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-surface border border-border rounded-2xl p-4 shadow-lg max-w-sm w-full mx-4` |
+| Icon container   | `w-10 h-10 rounded-xl bg-primary-500/10 flex items-center justify-center` |
+| Icon             | SVG bell, `stroke="#E8562E"`, strokeWidth 2 |
+| Title            | `text-sm font-semibold text-text`  |
+| Description      | `text-xs text-text-muted mt-1`     |
+| Allow button     | Primary Button pattern (text-xs variant) |
+| Dismiss button   | Ghost button pattern (text-xs variant) |
+| Accessibility    | `role="alert"`                     |
+
+**Pattern notes:**
+- Fixed-position bottom-center overlay with `z-50`
+- Uses `shadow-lg` (only floating element that does — cards use border only)
+- `max-w-sm` constrains width on large screens, `mx-4` provides mobile padding
+- Icon container uses `bg-primary-500/10` (10% opacity brand color, same as Status Pill pattern)
+- Buttons use `ml-[52px]` to align with text content after the icon
+- localStorage dismiss key prevents re-showing after user acts

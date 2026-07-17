@@ -59,6 +59,11 @@ export class UsersService {
     await this.usersRepository.deleteByClerkId(clerkId);
   }
 
+  async getReadReceiptsEnabled(userId: string): Promise<boolean> {
+    const user = await this.findById(userId);
+    return user.readReceiptsEnabled;
+  }
+
   async updateProfile(
     userId: string,
     data: { username?: string; avatarUrl?: string },

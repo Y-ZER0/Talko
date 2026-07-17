@@ -19,6 +19,9 @@ export class User {
   @Column({ name: "avatar_url", nullable: true, type: "varchar" })
   avatarUrl!: string | null;
 
+  @Column({ name: "read_receipts_enabled", default: true })
+  readReceiptsEnabled!: boolean;
+
   @CreateDateColumn({ name: "created_at" })
   createdAt!: Date;
 }

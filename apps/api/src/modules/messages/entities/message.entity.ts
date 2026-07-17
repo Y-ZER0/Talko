@@ -4,7 +4,9 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from "typeorm";
+import { MessageAttachment } from "./message-attachment.entity";
 
 @Entity("messages")
 export class Message {
@@ -43,4 +45,9 @@ export class Message {
 
   @UpdateDateColumn({ name: "updated_at" })
   updatedAt!: Date;
+
+  @OneToMany(() => MessageAttachment, (attachment) => attachment.message, {
+    cascade: true,
+  })
+  attachments!: MessageAttachment[];
 }

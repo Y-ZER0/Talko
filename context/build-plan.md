@@ -47,8 +47,8 @@ A note on the tag boundary: a frontend file can be `.tsx` and still be `[LOGIC]`
 
 ## Phase 7 — Feature 7: Read Receipts
 
-1. `[LOGIC]` `receipt:read` socket event (batched, one call per visible batch not per message) → writes `message_receipts.status='read'` **only if** `users.read_receipts_enabled = true` for that user → broadcasts `receipt:update` to the room
-2. `[UI]` `useMarkAsRead()` hook wrapping `IntersectionObserver` on the message list (debounced, fires once messages are >50% visible for >500ms), `ReadReceiptIcon` (sent/delivered/read ticks + timestamp) — matches Image 1 "🔥3 ✨1 · READ · 12:40"
+1. `[LOGIC]` `receipt:read` socket event (batched, one call per visible batch not per message) → writes `message_receipts.status='read'` **only if** `users.read_receipts_enabled = true` for that user → groups `ReceiptUpdateEventPayload[]` by senderId → emits to each sender's `user:{senderId}` room (not broadcast to conversation room — non-senders never receive events they can't use)
+2. `[UI]` `useMarkAsRead()` hook wrapping `IntersectionObserver` on the message list (debounced, fires once messages are >50% visible for >500ms), `ReadReceiptIcon` (sent/delivered/read ticks + timestamp). Listens for `receipt:update` on the socket (sent to `user:{id}` personal room — the socket is auto-joined in `handleConnection`, so no room filter needed). Payload is `ReceiptUpdateEventPayload[]` per sender — batch-update receipt state on sent messages in TanStack Query cache. Matches Image 1 "🔥3 ✨1 · READ · 12:40"
 
 ## Phase 8 — Feature 8: Multimedia Support
 

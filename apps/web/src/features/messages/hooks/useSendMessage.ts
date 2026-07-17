@@ -61,6 +61,7 @@ export function useSendMessage(conversationId: string, currentUserId?: string) {
         content: data.content ?? null,
         parentId: data.parentId,
         clientId: data.clientId,
+        attachments: data.attachments,
       };
 
       if (socket?.connected) {
@@ -90,8 +91,17 @@ export function useSendMessage(conversationId: string, currentUserId?: string) {
         senderId: effectiveUserId ?? "",
         parentId: data.parentId ?? null,
         content: data.content ?? null,
-        mediaUrl: data.mediaUrl ?? null,
-        mediaType: data.mediaType ?? null,
+        mediaUrl: null,
+        mediaType: null,
+        attachments: (data.attachments ?? []).map((a, i) => ({
+          id: `temp-att-${data.clientId}-${i}`,
+          messageId: `temp-${data.clientId}`,
+          mediaUrl: a.mediaUrl,
+          mediaType: a.mediaType,
+          thumbnailUrl: null,
+          fileSizeBytes: a.fileSize ?? null,
+          createdAt: new Date().toISOString(),
+        })),
         isDeleted: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

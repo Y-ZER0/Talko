@@ -25,4 +25,16 @@ export const conversationService = {
       body: JSON.stringify(data),
       headers: { Authorization: `Bearer ${token}` },
     }),
+
+  deleteConversation: (conversationId: string, token: string) =>
+    apiClient<void>(`/conversations/${conversationId}/leave`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  deleteGroup: (conversationId: string, token: string) =>
+    apiClient<void>(`/conversations/${conversationId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }),
 };

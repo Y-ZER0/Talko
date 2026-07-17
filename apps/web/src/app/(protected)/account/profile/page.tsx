@@ -1,33 +1,18 @@
 "use client";
 
-import { useCallback } from "react";
+import { UserProfile } from "@clerk/nextjs";
 import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
 import { useCurrentUserProfile } from "@/features/auth/hooks/useCurrentUserProfile";
-import { useUpdateProfile } from "@/features/auth/hooks/useUpdateProfile";
-import { PersonalDetailsForm } from "@/features/settings/ui/PersonalDetailsForm";
-import type { PersonalDetailsFormData } from "@/features/settings/ui/PersonalDetailsForm";
+import { ProfileHeader } from "@/features/settings/ui/ProfileHeader";
 
 export default function ProfilePage() {
   const { user: clerkUser, isLoaded: clerkLoaded } = useCurrentUser();
   const { data: profile, isLoading: profileLoading } = useCurrentUserProfile();
-  const updateProfile = useUpdateProfile();
 
-  const displayName =
-    profile?.username || clerkUser?.fullName || clerkUser?.username || "User";
+  const displayName = profile?.username || clerkUser?.fullName || clerkUser?.username || "User";
   const username = profile?.username || clerkUser?.username || "";
-  const email = clerkUser?.primaryEmailAddress?.emailAddress || "";
   const avatarUrl = profile?.avatarUrl || clerkUser?.imageUrl || null;
   const userId = profile?.id || clerkUser?.id || "";
-
-  const handleSubmit = useCallback(async (data: PersonalDetailsFormData) => {
-    try {
-      await updateProfile.mutateAsync({
-        username: data.username,
-      });
-    } catch (error) {
-      console.error("Failed to update profile:", error);
-    }
-  }, [updateProfile]);
 
   if (!clerkLoaded || profileLoading) {
     return (
@@ -38,17 +23,30 @@ export default function ProfilePage() {
   }
 
   return (
-    <PersonalDetailsForm
-      displayName={displayName}
-      username={username}
-      email={email}
-      location=""
-      website=""
-      about=""
-      avatarUrl={avatarUrl}
-      userId={userId}
-      isOnline={true}
-      onSubmit={handleSubmit}
-    />
+    <div className="flex flex-col gap-6">
+      <ProfileHeader
+        displayName={displayName}
+        username={username}
+        userId={userId}
+        avatarUrl={avatarUrl}
+        isOnline={true}
+      />
+
+      <div className="bg-surface rounded-2xl overflow-hidden">
+        <UserProfile
+          routing="hash"
+          appearance={{
+            elements: {
+              rootBox: "w-full",
+              card: "shadow-none border-none bg-surface",
+              navbar: "hidden",
+              headerTitle: "hidden",
+              headerSubtitle: "hidden",
+              profileSection__password: { display: "none" },
+            },
+          }}
+        />
+      </div>
+    </div>
   );
 }

@@ -15,6 +15,8 @@ import {
 } from "../lib/message-helpers";
 import { SocketEvent } from "@repo/shared";
 import type { MessageDto, MessagesCursorResponse } from "@repo/shared";
+import { ReceiptProvider } from "@/features/receipts/context/ReceiptContext";
+import { useMarkAsRead } from "@/features/receipts/hooks/useMarkAsRead";
 
 interface MessageListProps {
   conversationId: string;
@@ -25,6 +27,7 @@ export function MessageList({ conversationId, currentUserId }: MessageListProps)
   const { getToken, userId } = useAuth();
   const queryClient = useQueryClient();
   const { socket } = useSocket();
+  const observe = useMarkAsRead(conversationId);
   const {
     data,
     isLoading,
@@ -135,56 +138,59 @@ export function MessageList({ conversationId, currentUserId }: MessageListProps)
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="flex-1 overflow-y-auto px-4 py-2"
-    >
-      <div className="flex flex-col gap-1">
-        {hasNextPage && (
-          <div ref={sentinelRef} className="py-4 text-center">
-            <p className="text-text-muted text-xs">
-              {isFetchingNextPage ? "Loading more..." : "Load older messages"}
-            </p>
-          </div>
-        )}
-
-        {sortedMessages.map((message, index) => {
-          const previousMessage = sortedMessages[index - 1];
-          const isOwn = message.senderId === effectiveUserId;
-          const showDate = shouldShowDateSeparator(message, previousMessage);
-          const showName = shouldShowSenderName(
-            message,
-            previousMessage,
-            isOwn,
-          );
-
-          return (
-            <div key={message.id} className="flex flex-col">
-              {showDate && (
-                <div className="flex items-center justify-center py-4">
-                  <span className="font-mono text-[10px] text-text-muted tracking-wider bg-surface-muted px-3 py-1 rounded-full">
-                    {formatDateSeparator(message.createdAt)}
-                  </span>
-                </div>
-              )}
-
-              <MessageBubble
-                message={message}
-                isOwn={isOwn}
-                showAvatar={showName}
-                showTimestamp={showName}
-              />
+    <ReceiptProvider>
+      <div
+        ref={containerRef}
+        className="flex-1 overflow-y-auto px-4 py-2"
+      >
+        <div className="flex flex-col gap-1">
+          {hasNextPage && (
+            <div ref={sentinelRef} className="py-4 text-center">
+              <p className="text-text-muted text-xs">
+                {isFetchingNextPage ? "Loading more..." : "Load older messages"}
+              </p>
             </div>
-          );
-        })}
+          )}
 
-        {sortedMessages.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-12 text-text-muted">
-            <p className="text-sm">No messages yet</p>
-            <p className="text-xs mt-1">Start the conversation!</p>
-          </div>
-        )}
+          {sortedMessages.map((message, index) => {
+            const previousMessage = sortedMessages[index - 1];
+            const isOwn = message.senderId === effectiveUserId;
+            const showDate = shouldShowDateSeparator(message, previousMessage);
+            const showName = shouldShowSenderName(
+              message,
+              previousMessage,
+              isOwn,
+            );
+
+            return (
+              <div key={message.id} className="flex flex-col">
+                {showDate && (
+                  <div className="flex items-center justify-center py-4">
+                    <span className="font-mono text-[10px] text-text-muted tracking-wider bg-surface-muted px-3 py-1 rounded-full">
+                      {formatDateSeparator(message.createdAt)}
+                    </span>
+                  </div>
+                )}
+
+                <MessageBubble
+                  message={message}
+                  isOwn={isOwn}
+                  showAvatar={showName}
+                  showTimestamp={showName}
+                  observeRef={observe}
+                />
+              </div>
+            );
+          })}
+
+          {sortedMessages.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-12 text-text-muted">
+              <p className="text-sm">No messages yet</p>
+              <p className="text-xs mt-1">Start the conversation!</p>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </ReceiptProvider>
   );
 }

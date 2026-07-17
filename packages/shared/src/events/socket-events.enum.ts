@@ -19,11 +19,15 @@ export enum SocketEvent {
 
   // Conversation
   CONVERSATION_JOIN = "conversation:join",
+  CONVERSATION_OPEN = "conversation:open",
   CONVERSATION_LEAVE = "conversation:leave",
   CONVERSATION_NEW = "conversation:new",
+  CONVERSATION_DELETED = "conversation:deleted",
 
   // Presence
   PRESENCE_UPDATE = "presence:update",
+  PING = "ping",
+  PONG = "pong",
 
   // System
   ERROR = "error",

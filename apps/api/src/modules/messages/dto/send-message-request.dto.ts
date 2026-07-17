@@ -4,8 +4,27 @@ import {
   IsNotEmpty,
   IsUUID,
   IsEnum,
+  IsArray,
+  ValidateNested,
+  IsNumber,
+  IsPositive,
 } from "class-validator";
+import { Type } from "class-transformer";
 import { MessageMediaType } from "@repo/shared";
+
+class AttachmentDto {
+  @IsString()
+  @IsNotEmpty()
+  mediaUrl!: string;
+
+  @IsEnum(MessageMediaType)
+  mediaType!: MessageMediaType;
+
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  fileSize?: number;
+}
 
 export class SendMessageRequestDto {
   @IsOptional()
@@ -22,11 +41,8 @@ export class SendMessageRequestDto {
   clientId!: string;
 
   @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  mediaUrl?: string;
-
-  @IsOptional()
-  @IsEnum(MessageMediaType)
-  mediaType?: MessageMediaType;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AttachmentDto)
+  attachments?: AttachmentDto[];
 }

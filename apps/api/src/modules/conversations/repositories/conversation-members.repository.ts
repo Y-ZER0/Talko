@@ -32,7 +32,22 @@ export class ConversationMembersRepository {
     });
   }
 
+  async findByConversation(conversationId: string): Promise<ConversationMember[]> {
+    return this.repo.find({ where: { conversationId }, relations: { user: true } });
+  }
+
   async remove(member: ConversationMember): Promise<void> {
     await this.repo.remove(member);
+  }
+
+  async updateLastReadAt(
+    conversationId: string,
+    userId: string,
+    lastReadAt: Date,
+  ): Promise<void> {
+    await this.repo.update(
+      { conversationId, userId },
+      { lastReadAt },
+    );
   }
 }

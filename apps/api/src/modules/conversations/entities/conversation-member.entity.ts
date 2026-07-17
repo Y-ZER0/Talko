@@ -22,6 +22,9 @@ export class ConversationMember {
   @Column({ name: "user_id" })
   userId!: string;
 
+  @Column({ name: "last_read_at", nullable: true, type: "timestamp" })
+  lastReadAt!: Date | null;
+
   @Column({ default: "member" })
   role!: string;
 

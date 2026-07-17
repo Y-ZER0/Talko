@@ -1,9 +1,7 @@
 "use client";
 
 import { ProfileCoverBanner } from "./ProfileCoverBanner";
-import { ProfileAvatarUpload } from "./ProfileAvatarUpload";
 import { ProfileIdentityBlock } from "./ProfileIdentityBlock";
-import { ProfileStatusField } from "./ProfileStatusField";
 
 interface ProfileHeaderProps {
   displayName: string;
@@ -12,8 +10,6 @@ interface ProfileHeaderProps {
   avatarUrl?: string | null;
   coverUrl?: string | null;
   isOnline?: boolean;
-  onAvatarUpload?: () => void;
-  onCoverUpload?: () => void;
 }
 
 export function ProfileHeader({
@@ -23,22 +19,31 @@ export function ProfileHeader({
   avatarUrl,
   coverUrl,
   isOnline = false,
-  onAvatarUpload,
-  onCoverUpload,
 }: ProfileHeaderProps) {
   return (
     <div className="bg-surface rounded-2xl overflow-hidden">
-      <ProfileCoverBanner coverUrl={coverUrl} onUpload={onCoverUpload} />
+      <ProfileCoverBanner coverUrl={coverUrl} />
 
       <div className="px-6 pb-6">
-        <div className="flex items-end gap-4 -mt-12 mb-4">
-          <ProfileAvatarUpload
-            name={displayName}
-            userId={userId}
-            avatarUrl={avatarUrl}
-            isOnline={isOnline}
-            onUpload={onAvatarUpload}
-          />
+        <div className="flex items-end gap-4 -mt-6 mb-4">
+          <div className="relative w-24 h-24">
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={displayName}
+                className="w-24 h-24 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-primary-500 flex items-center justify-center text-white text-2xl font-bold">
+                {displayName.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <span
+              className={`absolute bottom-1 left-1 w-4 h-4 rounded-full border-2 border-surface ${
+                isOnline ? "bg-online" : "bg-text-muted"
+              }`}
+            />
+          </div>
 
           <div className="flex-1 pb-2">
             <ProfileIdentityBlock
@@ -48,8 +53,6 @@ export function ProfileHeader({
             />
           </div>
         </div>
-
-        <ProfileStatusField />
       </div>
     </div>
   );
