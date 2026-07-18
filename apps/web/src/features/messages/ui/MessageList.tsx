@@ -2,31 +2,45 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@clerk/nextjs";
-import { useQueryClient } from "@tanstack/react-query";
-import type { InfiniteData } from "@tanstack/react-query";
 import { useMessages } from "../hooks/useMessages";
-import { useSocket } from "@/features/presence/hooks/useSocket";
-import { messageKeys } from "../hooks/messageKeys";
+import { useRealtimeMessages } from "../hooks/useRealtimeMessages";
 import { MessageBubble } from "./MessageBubble";
 import {
   formatDateSeparator,
   shouldShowDateSeparator,
   shouldShowSenderName,
 } from "../lib/message-helpers";
-import { SocketEvent } from "@repo/shared";
-import type { MessageDto, MessagesCursorResponse } from "@repo/shared";
+import type { MessageDto } from "@repo/shared";
 import { ReceiptProvider } from "@/features/receipts/context/ReceiptContext";
 import { useMarkAsRead } from "@/features/receipts/hooks/useMarkAsRead";
 
 interface MessageListProps {
   conversationId: string;
   currentUserId?: string;
+  editingMessageId?: string;
+  scrollToMessageId?: string;
+  onStartEdit?: (messageId: string) => void;
+  onSaveEdit?: (messageId: string, content: string) => void;
+  onCancelEdit?: () => void;
+  onAddReaction?: (messageId: string, emoji: string) => void;
+  onRemoveReaction?: (messageId: string, emoji: string) => void;
+  onDelete?: (messageId: string) => void;
 }
 
-export function MessageList({ conversationId, currentUserId }: MessageListProps) {
-  const { getToken, userId } = useAuth();
-  const queryClient = useQueryClient();
-  const { socket } = useSocket();
+export function MessageList({
+  conversationId,
+  currentUserId,
+  editingMessageId,
+  scrollToMessageId,
+  onStartEdit,
+  onSaveEdit,
+  onCancelEdit,
+  onAddReaction,
+  onRemoveReaction,
+  onDelete,
+}: MessageListProps) {
+  const { userId } = useAuth();
+  const effectiveUserId = currentUserId ?? userId;
   const observe = useMarkAsRead(conversationId);
   const {
     data,
@@ -36,7 +50,7 @@ export function MessageList({ conversationId, currentUserId }: MessageListProps)
     fetchNextPage,
   } = useMessages(conversationId);
 
-  const effectiveUserId = currentUserId ?? userId;
+  useRealtimeMessages(conversationId, effectiveUserId ?? undefined);
 
   const messages = data?.pages.flatMap((page) => page.data) ?? [];
   const sortedMessages = [...messages].sort(
@@ -61,6 +75,23 @@ export function MessageList({ conversationId, currentUserId }: MessageListProps)
   }, [isLoading, scrollToBottom]);
 
   useEffect(() => {
+    if (!scrollToMessageId || isLoading) return;
+    const timer = setTimeout(() => {
+      const el = containerRef.current?.querySelector(
+        `[data-message-id="${scrollToMessageId}"]`,
+      );
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("ring-2", "ring-primary-500/30", "rounded-lg");
+        setTimeout(() => {
+          el.classList.remove("ring-2", "ring-primary-500/30", "rounded-lg");
+        }, 2000);
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [scrollToMessageId, isLoading]);
+
+  useEffect(() => {
     if (!sentinelRef.current || !hasNextPage) return;
 
     const observer = new IntersectionObserver(
@@ -69,65 +100,12 @@ export function MessageList({ conversationId, currentUserId }: MessageListProps)
           fetchNextPage();
         }
       },
-      {
-        root: containerRef.current,
-        rootMargin: "100px",
-      },
+      { root: containerRef.current, rootMargin: "100px" },
     );
 
     observer.observe(sentinelRef.current);
-
     return () => observer.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleMessageAck = (payload: { clientId: string; message: MessageDto }) => {
-      queryClient.setQueryData<InfiniteData<MessagesCursorResponse>>(
-        messageKeys.list(conversationId),
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              data: page.data.map((msg) =>
-                msg.clientId === payload.clientId ? payload.message : msg,
-              ),
-            })),
-          };
-        },
-      );
-    };
-
-    const handleNewMessage = (message: MessageDto) => {
-      if (message.senderId === effectiveUserId) return;
-      queryClient.setQueryData<InfiniteData<MessagesCursorResponse>>(
-        messageKeys.list(conversationId),
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            pages: old.pages.map((page, index) => {
-              if (index === 0) {
-                if (page.data.some((m) => m.id === message.id || m.clientId === message.clientId)) return page;
-                return { ...page, data: [...page.data, message] };
-              }
-              return page;
-            }),
-          };
-        },
-      );
-    };
-
-    socket.on(SocketEvent.MESSAGE_ACK, handleMessageAck);
-    socket.on(SocketEvent.MESSAGE_NEW, handleNewMessage);
-    return () => {
-      socket.off(SocketEvent.MESSAGE_ACK, handleMessageAck);
-      socket.off(SocketEvent.MESSAGE_NEW, handleNewMessage);
-    };
-  }, [socket, conversationId, queryClient, effectiveUserId]);
 
   if (isLoading) {
     return (
@@ -139,10 +117,7 @@ export function MessageList({ conversationId, currentUserId }: MessageListProps)
 
   return (
     <ReceiptProvider>
-      <div
-        ref={containerRef}
-        className="flex-1 overflow-y-auto px-4 py-2"
-      >
+      <div ref={containerRef} className="flex-1 overflow-y-auto px-4 py-2">
         <div className="flex flex-col gap-1">
           {hasNextPage && (
             <div ref={sentinelRef} className="py-4 text-center">
@@ -156,14 +131,10 @@ export function MessageList({ conversationId, currentUserId }: MessageListProps)
             const previousMessage = sortedMessages[index - 1];
             const isOwn = message.senderId === effectiveUserId;
             const showDate = shouldShowDateSeparator(message, previousMessage);
-            const showName = shouldShowSenderName(
-              message,
-              previousMessage,
-              isOwn,
-            );
+            const showName = shouldShowSenderName(message, previousMessage, isOwn);
 
             return (
-              <div key={message.id} className="flex flex-col">
+              <div key={message.id} data-message-id={message.id} className="flex flex-col">
                 {showDate && (
                   <div className="flex items-center justify-center py-4">
                     <span className="font-mono text-[10px] text-text-muted tracking-wider bg-surface-muted px-3 py-1 rounded-full">
@@ -171,13 +142,20 @@ export function MessageList({ conversationId, currentUserId }: MessageListProps)
                     </span>
                   </div>
                 )}
-
                 <MessageBubble
                   message={message}
                   isOwn={isOwn}
                   showAvatar={showName}
                   showTimestamp={showName}
                   observeRef={observe}
+                  currentUserId={effectiveUserId ?? undefined}
+                  onAddReaction={onAddReaction}
+                  onRemoveReaction={onRemoveReaction}
+                  onDelete={onDelete}
+                  editingMessageId={editingMessageId}
+                  onStartEdit={onStartEdit}
+                  onSaveEdit={onSaveEdit}
+                  onCancelEdit={onCancelEdit}
                 />
               </div>
             );

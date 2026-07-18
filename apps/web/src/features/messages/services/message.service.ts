@@ -37,4 +37,61 @@ export const messageService = {
       body: JSON.stringify(data),
       headers: { Authorization: `Bearer ${token}` },
     }),
+
+  editMessage: (
+    conversationId: string,
+    messageId: string,
+    content: string,
+    token: string,
+  ) =>
+    apiClient<MessageDto>(
+      `/conversations/${conversationId}/messages/${messageId}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ content }),
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    ),
+
+  deleteMessage: (
+    conversationId: string,
+    messageId: string,
+    token: string,
+  ) =>
+    apiClient<MessageDto>(
+      `/conversations/${conversationId}/messages/${messageId}`,
+      {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    ),
+
+  addReaction: (
+    conversationId: string,
+    messageId: string,
+    emoji: string,
+    token: string,
+  ) =>
+    apiClient<{ id: string; messageId: string; userId: string; emoji: string; createdAt: string }>(
+      `/conversations/${conversationId}/messages/${messageId}/reactions`,
+      {
+        method: "POST",
+        body: JSON.stringify({ emoji }),
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    ),
+
+  removeReaction: (
+    conversationId: string,
+    messageId: string,
+    emoji: string,
+    token: string,
+  ) =>
+    apiClient<void>(
+      `/conversations/${conversationId}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`,
+      {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    ),
 };

@@ -4,6 +4,7 @@ import type { UserDto } from "@repo/shared";
 export type UpdateProfileRequest = {
   username?: string;
   avatarUrl?: string;
+  readReceiptsEnabled?: boolean;
 };
 
 export const authService = {

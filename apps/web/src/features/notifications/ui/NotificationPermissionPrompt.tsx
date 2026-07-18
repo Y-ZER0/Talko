@@ -9,7 +9,11 @@ function getPermissionState(): NotificationPermission | null {
   return Notification.permission;
 }
 
-export function NotificationPermissionPrompt() {
+interface NotificationPermissionPromptProps {
+  onPermissionGranted?: () => void;
+}
+
+export function NotificationPermissionPrompt({ onPermissionGranted }: NotificationPermissionPromptProps) {
   const [visible, setVisible] = useState(false);
   const [requesting, setRequesting] = useState(false);
 
@@ -29,10 +33,13 @@ export function NotificationPermissionPrompt() {
       const result = await Notification.requestPermission();
       setVisible(false);
       localStorage.setItem(STORAGE_KEY, "1");
+      if (result === "granted") {
+        onPermissionGranted?.();
+      }
     } finally {
       setRequesting(false);
     }
-  }, []);
+  }, [onPermissionGranted]);
 
   const handleDismiss = useCallback(() => {
     setVisible(false);

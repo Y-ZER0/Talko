@@ -66,7 +66,7 @@ export class UsersService {
 
   async updateProfile(
     userId: string,
-    data: { username?: string; avatarUrl?: string },
+    data: { username?: string; avatarUrl?: string; readReceiptsEnabled?: boolean },
   ): Promise<User> {
     const user = await this.findById(userId);
 
@@ -80,6 +80,10 @@ export class UsersService {
 
     if (data.avatarUrl !== undefined) {
       user.avatarUrl = data.avatarUrl || null;
+    }
+
+    if (data.readReceiptsEnabled !== undefined) {
+      user.readReceiptsEnabled = data.readReceiptsEnabled;
     }
 
     return this.usersRepository.save(user);

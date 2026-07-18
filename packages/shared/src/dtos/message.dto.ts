@@ -1,4 +1,5 @@
 import type { MessageAttachmentDto } from "./message-attachment.dto";
+import type { ReactionDto } from "./reaction.dto";
 
 export interface MessageDto {
   id: string;
@@ -9,6 +10,7 @@ export interface MessageDto {
   mediaUrl: string | null;
   mediaType: string | null;
   attachments: MessageAttachmentDto[];
+  reactions: ReactionDto[];
   isDeleted: boolean;
   createdAt: string;
   updatedAt: string;

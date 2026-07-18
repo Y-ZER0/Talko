@@ -233,6 +233,7 @@ The provided schema covers 1–4, 7 (partially), and 10 (partially). It does **n
 
 ```dbml
 // -- Extends `messages`: search + edit tracking --
+// APPLIED via Supabase SQL editor (Phase 11):
 // ALTER TABLE messages ADD COLUMN search_vector tsvector
 //   GENERATED ALWAYS AS (to_tsvector('english', coalesce(content, ''))) STORED;
 // CREATE INDEX messages_search_idx ON messages USING GIN (search_vector);

@@ -12,6 +12,7 @@ import { RealtimeModule } from "./modules/realtime/realtime.module";
 import { PresenceModule } from "./modules/presence/presence.module";
 import { MediaModule } from "./modules/media/media.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
+import { SearchModule } from "./modules/search/search.module";
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { NotificationsModule } from "./modules/notifications/notifications.modul
     PresenceModule,
     MediaModule,
     NotificationsModule,
+    SearchModule,
   ],
   providers: [
     {

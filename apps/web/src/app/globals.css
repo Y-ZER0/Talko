@@ -67,3 +67,27 @@
     box-sizing: border-box;
   }
 }
+
+/* Dark theme */
+.dark {
+  --color-bg: #0D0D0E;
+  --color-surface: #1A1A1B;
+  --color-surface-muted: #232324;
+  --color-border: #2E2E2F;
+
+  --color-text: #EDEDED;
+  --color-text-muted: #8A8A8A;
+  --color-text-inverse: #0D0D0E;
+}
+
+/* Dim theme */
+.dim {
+  --color-bg: #1A2233;
+  --color-surface: #222D3F;
+  --color-surface-muted: #2A3548;
+  --color-border: #344054;
+
+  --color-text: #E8ECF1;
+  --color-text-muted: #7A8BA3;
+  --color-text-inverse: #1A2233;
+}

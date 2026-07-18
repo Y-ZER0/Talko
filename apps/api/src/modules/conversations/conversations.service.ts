@@ -11,7 +11,7 @@ import { Conversation } from "./entities/conversation.entity";
 import { CreateConversationRequestDto } from "./dto/create-conversation-request.dto";
 import { ConversationsRepository } from "./repositories/conversations.repository";
 import { ConversationMembersRepository } from "./repositories/conversation-members.repository";
-import { ChatGateway } from "../realtime/chat.gateway";
+import { ConnectionGateway } from "../realtime/connection.gateway";
 import { SocketEvent } from "@repo/shared";
 import type {
   ConversationDto,
@@ -23,8 +23,8 @@ export class ConversationsService {
   constructor(
     private readonly conversationsRepository: ConversationsRepository,
     private readonly memberRepository: ConversationMembersRepository,
-    @Inject(forwardRef(() => ChatGateway))
-    private readonly chatGateway: ChatGateway,
+    @Inject(forwardRef(() => ConnectionGateway))
+    private readonly connectionGateway: ConnectionGateway,
   ) {}
 
   async create(
@@ -80,7 +80,7 @@ export class ConversationsService {
       conversation.id,
     ) as Conversation;
 
-    this.chatGateway.server
+    this.connectionGateway.server
       .to(`user:${participantId}`)
       .emit(SocketEvent.CONVERSATION_NEW, this.toCreateConversationDto(result));
 
@@ -112,7 +112,7 @@ export class ConversationsService {
 
     for (const userId of allIds) {
       if (userId !== currentUserId) {
-        this.chatGateway.server
+        this.connectionGateway.server
           .to(`user:${userId}`)
           .emit(SocketEvent.CONVERSATION_NEW, this.toCreateConversationDto(result));
       }
@@ -245,7 +245,7 @@ export class ConversationsService {
       .map((m) => m.userId);
 
     for (const id of remainingMemberIds) {
-      this.chatGateway.server
+      this.connectionGateway.server
         .to(`user:${id}`)
         .emit(SocketEvent.CONVERSATION_LEAVE, { conversationId, userId });
     }
@@ -272,7 +272,7 @@ export class ConversationsService {
 
     const allMemberIds = conversation.members.map((m) => m.userId);
     for (const id of allMemberIds) {
-      this.chatGateway.server
+      this.connectionGateway.server
         .to(`user:${id}`)
         .emit(SocketEvent.CONVERSATION_DELETED, { conversationId });
     }

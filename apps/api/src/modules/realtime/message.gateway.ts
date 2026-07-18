@@ -1,20 +1,15 @@
+import { Logger } from "@nestjs/common";
 import {
   WebSocketGateway,
   WebSocketServer,
   SubscribeMessage,
-  OnGatewayConnection,
-  OnGatewayDisconnect,
   ConnectedSocket,
   MessageBody,
 } from "@nestjs/websockets";
-import { ConfigService } from "@nestjs/config";
-import { Logger } from "@nestjs/common";
-import { verifyToken, clerkClient } from "@clerk/clerk-sdk-node";
 import { Server, Socket } from "socket.io";
 import {
   SocketEvent,
   type SendMessageEventPayload,
-  type ReceiptReadEventPayload,
 } from "@repo/shared";
 import { MessagesService } from "../messages/messages.service";
 import { UsersService } from "../users/users.service";
@@ -22,85 +17,19 @@ import { ConversationMembersRepository } from "../conversations/repositories/con
 import { NotificationsService } from "../notifications/services/notifications.service";
 
 @WebSocketGateway({
+  namespace: "/",
   cors: { origin: "*", credentials: true },
 })
-export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  private readonly logger = new Logger(ChatGateway.name);
+export class MessageGateway {
+  private readonly logger = new Logger(MessageGateway.name);
   @WebSocketServer() server!: Server;
 
   constructor(
     private readonly messagesService: MessagesService,
-    private readonly usersService: UsersService,
-    private readonly configService: ConfigService,
     private readonly memberRepo: ConversationMembersRepository,
+    private readonly usersService: UsersService,
     private readonly notificationsService: NotificationsService,
   ) {}
-
-  async handleConnection(socket: Socket) {
-    try {
-      const token = socket.handshake.auth.token;
-      if (!token) {
-        this.logger.warn("connection rejected: no token");
-        socket.disconnect();
-        return;
-      }
-
-      const secretKey = this.configService.get<string>("app.clerkSecretKey");
-      if (!secretKey) {
-        this.logger.error("connection rejected: clerkSecretKey missing in config");
-        socket.disconnect();
-        return;
-      }
-
-      const verifiedSession = await verifyToken(token, { secretKey });
-
-      let user = await this.usersService.findByClerkId(verifiedSession.sub);
-
-      if (!user) {
-        const clerkUser = await clerkClient.users.getUser(verifiedSession.sub);
-        user = await this.usersService.upsert({
-          id: clerkUser.id,
-          username:
-            clerkUser.username ??
-            clerkUser.emailAddresses?.[0]?.emailAddress?.split("@")[0] ??
-            `user_${clerkUser.id.slice(-8)}`,
-          imageUrl: clerkUser.imageUrl ?? undefined,
-        });
-      }
-
-      socket.data.userId = user.id;
-      socket.join(`user:${user.id}`);
-    } catch (err) {
-      this.logger.error("connection rejected: token verification failed", err);
-      socket.disconnect();
-    }
-  }
-
-  async handleDisconnect(_socket: Socket) {}
-
-  @SubscribeMessage(SocketEvent.CONVERSATION_JOIN)
-  handleConversationJoin(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody() payload: { conversationId: string },
-  ) {
-    socket.join(payload.conversationId);
-  }
-
-  @SubscribeMessage(SocketEvent.CONVERSATION_OPEN)
-  async handleConversationOpen(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody() payload: { conversationId: string },
-  ) {
-    try {
-      await this.memberRepo.updateLastReadAt(
-        payload.conversationId,
-        socket.data.userId,
-        new Date(),
-      );
-    } catch (err) {
-      this.logger.error(`handleConversationOpen failed`, err);
-    }
-  }
 
   @SubscribeMessage(SocketEvent.MESSAGE_NEW)
   async handleMessage(
@@ -187,32 +116,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
     } catch (err) {
       this.logger.error("notifyOfflineRecipients failed", err);
-    }
-  }
-
-  @SubscribeMessage(SocketEvent.RECEIPT_READ)
-  async handleReceiptRead(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody() payload: ReceiptReadEventPayload,
-  ) {
-    try {
-      const userId = socket.data.userId;
-
-      const enabled = await this.usersService.getReadReceiptsEnabled(userId);
-      if (!enabled) return;
-
-      const grouped = await this.messagesService.markAsRead(
-        userId,
-        payload.conversationId,
-        payload.messageIds,
-      );
-
-      for (const [senderId, updates] of Object.entries(grouped)) {
-        this.server.to(`user:${senderId}`).emit(SocketEvent.RECEIPT_UPDATE, updates);
-      }
-    } catch (err) {
-      this.logger.error(`handleReceiptRead failed`, err);
-      socket.emit(SocketEvent.ERROR, { message: "Failed to mark as read" });
     }
   }
 }

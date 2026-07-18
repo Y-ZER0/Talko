@@ -6,6 +6,7 @@ export * from "./dtos/reaction.dto";
 export * from "./dtos/receipt.dto";
 export * from "./dtos/auth.dto";
 export * from "./dtos/notification-preferences.dto";
+export * from "./dtos/search-result.dto";
 
 export * from "./events/socket-events.enum";
 export * from "./events/typing.event";

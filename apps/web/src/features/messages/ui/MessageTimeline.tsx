@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@clerk/nextjs";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useSocket } from "@/features/presence/hooks/useSocket";
 import { usePresence } from "@/features/presence/hooks/usePresence";
 import { formatLastSeen } from "@/features/presence/lib/presence-helpers";
@@ -9,8 +10,15 @@ import { useCurrentUserProfile } from "@/features/auth/hooks/useCurrentUserProfi
 import { useConversation } from "@/features/conversations/hooks/useConversation";
 import { getDisplayName } from "@/features/conversations/lib/conversation-helpers";
 import { SharedMediaPanel } from "@/features/media/ui/SharedMediaPanel";
+import { SearchPanel } from "@/features/search/ui/SearchPanel";
+import { useEditMessage } from "../hooks/useEditMessage";
+import { useDeleteMessage } from "../hooks/useDeleteMessage";
+import { useReaction } from "../hooks/useReaction";
+import { useReplyTo } from "../hooks/useReplyTo";
+import { ConversationHeader } from "./ConversationHeader";
 import { MessageList } from "./MessageList";
 import { MessageComposer } from "./MessageComposer";
+import { DeleteConfirmModal } from "./DeleteConfirmModal";
 import { SocketEvent } from "@repo/shared";
 
 interface MessageTimelineProps {
@@ -19,12 +27,25 @@ interface MessageTimelineProps {
 
 export function MessageTimeline({ conversationId }: MessageTimelineProps) {
   const [infoPanelOpen, setInfoPanelOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
+  const [scrollToMessageId, setScrollToMessageId] = useState<string | null>(null);
+
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
   const { userId: clerkId } = useAuth();
   const { data: profile } = useCurrentUserProfile();
   const currentUserId = profile?.id ?? clerkId ?? undefined;
   const { socket, joinRoom, leaveRoom } = useSocket();
   const { isOnline, getLastSeen } = usePresence();
   const { data: conversation, isLoading } = useConversation(conversationId);
+
+  const editMessage = useEditMessage(conversationId);
+  const deleteMessage = useDeleteMessage(conversationId);
+  const { addReaction, removeReaction } = useReaction(conversationId, currentUserId);
+  const { replyTarget, cancelReply } = useReplyTo();
 
   const displayName = conversation
     ? getDisplayName(conversation, currentUserId)
@@ -50,6 +71,14 @@ export function MessageTimeline({ conversationId }: MessageTimelineProps) {
     };
   }, [conversationId, joinRoom, leaveRoom, socket]);
 
+  useEffect(() => {
+    const msgId = searchParams.get("messageId");
+    if (msgId) {
+      setScrollToMessageId(msgId);
+      router.replace(`/${conversationId}`, { scroll: false });
+    }
+  }, [searchParams, conversationId, router]);
+
   const online = otherUserId ? isOnline(otherUserId) : false;
   const lastSeen = otherUserId ? getLastSeen(otherUserId) : undefined;
 
@@ -61,85 +90,102 @@ export function MessageTimeline({ conversationId }: MessageTimelineProps) {
         : undefined
     : undefined;
 
+  const handleStartEdit = useCallback((messageId: string) => {
+    setEditingMessageId(messageId);
+    setDeletingMessageId(null);
+  }, []);
+
+  const handleSaveEdit = useCallback(
+    (messageId: string, content: string) => {
+      editMessage.mutate(
+        { messageId, content },
+        { onSuccess: () => setEditingMessageId(null) },
+      );
+    },
+    [editMessage],
+  );
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingMessageId(null);
+  }, []);
+
+  const handleRequestDelete = useCallback((messageId: string) => {
+    setDeletingMessageId(messageId);
+    setEditingMessageId(null);
+  }, []);
+
+  const handleConfirmDelete = useCallback(() => {
+    if (deletingMessageId) {
+      deleteMessage.mutate(
+        { messageId: deletingMessageId },
+        { onSuccess: () => setDeletingMessageId(null) },
+      );
+    }
+  }, [deletingMessageId, deleteMessage]);
+
+  const handleCancelDelete = useCallback(() => {
+    setDeletingMessageId(null);
+  }, []);
+
+  const handleAddReaction = useCallback(
+    (messageId: string, emoji: string) => {
+      addReaction.mutate({ messageId, emoji });
+    },
+    [addReaction],
+  );
+
+  const handleRemoveReaction = useCallback(
+    (messageId: string, emoji: string) => {
+      removeReaction.mutate({ messageId, emoji });
+    },
+    [removeReaction],
+  );
+
+  const handleSearchResultClick = useCallback(
+    (convId: string, messageId: string) => {
+      if (convId === conversationId) {
+        setScrollToMessageId(messageId);
+      } else {
+        router.push(`/${convId}?messageId=${messageId}`);
+      }
+    },
+    [conversationId, router],
+  );
+
   return (
     <div className="flex h-full">
       <div className="flex flex-col flex-1 min-w-0">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-surface">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center text-text-inverse font-semibold text-sm">
-              {avatarLabel}
-            </div>
-            <div>
-              <h2 className="font-semibold text-text">
-                {isLoading ? "Loading..." : displayName}
-              </h2>
-              {statusText && (
-                <p
-                  className={`text-xs ${
-                    online ? "text-online" : "text-text-muted"
-                  }`}
-                >
-                  {statusText}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="w-9 h-9 rounded-full flex items-center justify-center text-text-muted hover:bg-surface-muted transition-colors"
-              aria-label="Search"
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setInfoPanelOpen((p) => !p)}
-              className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
-                infoPanelOpen
-                  ? "bg-primary-500 text-text-inverse"
-                  : "text-text-muted hover:bg-surface-muted"
-              }`}
-              aria-label={infoPanelOpen ? "Close info panel" : "Open info panel"}
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="1" />
-                <circle cx="19" cy="12" r="1" />
-                <circle cx="5" cy="12" r="1" />
-              </svg>
-            </button>
-          </div>
-        </div>
+        <ConversationHeader
+          avatarLabel={avatarLabel}
+          displayName={displayName}
+          isLoading={isLoading}
+          statusText={statusText}
+          online={online}
+          infoPanelOpen={infoPanelOpen}
+          onToggleInfoPanel={() => setInfoPanelOpen((p) => !p)}
+          onSearchClick={() => setSearchOpen(true)}
+        />
 
         <MessageList
           conversationId={conversationId}
           currentUserId={currentUserId}
+          editingMessageId={editingMessageId ?? undefined}
+          scrollToMessageId={scrollToMessageId ?? undefined}
+          onStartEdit={handleStartEdit}
+          onSaveEdit={handleSaveEdit}
+          onCancelEdit={handleCancelEdit}
+          onAddReaction={handleAddReaction}
+          onRemoveReaction={handleRemoveReaction}
+          onDelete={handleRequestDelete}
         />
 
-        <MessageComposer conversationId={conversationId} displayName={displayName} currentUserId={currentUserId} />
+        <MessageComposer
+          conversationId={conversationId}
+          displayName={displayName}
+          currentUserId={currentUserId}
+          replyTarget={replyTarget}
+          onCancelReply={cancelReply}
+        />
       </div>
 
       {infoPanelOpen && (
@@ -159,6 +205,20 @@ export function MessageTimeline({ conversationId }: MessageTimelineProps) {
           </div>
         </>
       )}
+
+      {deletingMessageId && (
+        <DeleteConfirmModal
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+        />
+      )}
+
+      <SearchPanel
+        isOpen={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        currentUserId={currentUserId}
+        onResultClick={handleSearchResultClick}
+      />
     </div>
   );
 }

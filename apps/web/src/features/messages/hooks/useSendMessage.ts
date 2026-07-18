@@ -102,6 +102,7 @@ export function useSendMessage(conversationId: string, currentUserId?: string) {
           fileSizeBytes: a.fileSize ?? null,
           createdAt: new Date().toISOString(),
         })),
+        reactions: [],
         isDeleted: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

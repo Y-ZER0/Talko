@@ -1,13 +1,20 @@
 import {
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from "@nestjs/common";
 import { Message } from "./entities/message.entity";
 import { MessageAttachment } from "./entities/message-attachment.entity";
+import { MessageReaction } from "./entities/message-reaction.entity";
 import { SendMessageRequestDto } from "./dto/send-message-request.dto";
 import { MessagesRepository } from "./repositories/messages.repository";
 import { ConversationMembersRepository } from "../conversations/repositories/conversation-members.repository";
-import type { MessageDto, ReceiptUpdateEventPayload, MessageAttachmentDto } from "@repo/shared";
+import type {
+  MessageDto,
+  ReceiptUpdateEventPayload,
+  MessageAttachmentDto,
+  ReactionDto,
+} from "@repo/shared";
 
 @Injectable()
 export class MessagesService {
@@ -123,6 +130,81 @@ export class MessagesService {
     return grouped;
   }
 
+  async edit(
+    userId: string,
+    messageId: string,
+    content: string,
+  ): Promise<MessageDto> {
+    const message = await this.messagesRepository.findById(messageId);
+    if (!message)
+      throw new NotFoundException("Message not found");
+    if (message.senderId !== userId)
+      throw new UnauthorizedException("Not your message to edit");
+
+    const updated = await this.messagesRepository.updateMessage(messageId, {
+      content,
+      editedAt: new Date(),
+    });
+
+    const saved = await this.messagesRepository.findById(messageId);
+    return this.toDto(saved!);
+  }
+
+  async delete(
+    userId: string,
+    messageId: string,
+  ): Promise<MessageDto> {
+    const message = await this.messagesRepository.findById(messageId);
+    if (!message)
+      throw new NotFoundException("Message not found");
+    if (message.senderId !== userId)
+      throw new UnauthorizedException("Not your message to delete");
+
+    await this.messagesRepository.updateMessage(messageId, {
+      isDeleted: true,
+      content: null,
+    });
+
+    const saved = await this.messagesRepository.findById(messageId);
+    return this.toDto(saved!);
+  }
+
+  async addReaction(
+    userId: string,
+    messageId: string,
+    emoji: string,
+  ): Promise<ReactionDto> {
+    const message = await this.messagesRepository.findById(messageId);
+    if (!message)
+      throw new NotFoundException("Message not found");
+
+    const reaction = await this.messagesRepository.upsertReaction(
+      messageId,
+      userId,
+      emoji,
+    );
+
+    return this.reactionToDto(reaction);
+  }
+
+  async removeReaction(
+    userId: string,
+    messageId: string,
+    emoji: string,
+  ): Promise<void> {
+    await this.messagesRepository.deleteReaction(messageId, userId, emoji);
+  }
+
+  private reactionToDto(reaction: MessageReaction): ReactionDto {
+    return {
+      id: reaction.id,
+      messageId: reaction.messageId,
+      userId: reaction.userId,
+      emoji: reaction.emoji,
+      createdAt: reaction.createdAt.toISOString(),
+    };
+  }
+
   private attachmentToDto(attachment: MessageAttachment): MessageAttachmentDto {
     return {
       id: attachment.id,
@@ -145,6 +227,7 @@ export class MessagesService {
       mediaUrl: message.mediaUrl ?? null,
       mediaType: message.mediaType ?? null,
       attachments: (message.attachments ?? []).map((a) => this.attachmentToDto(a)),
+      reactions: (message.reactions ?? []).map((r) => this.reactionToDto(r)),
       isDeleted: message.isDeleted,
       createdAt: message.createdAt.toISOString(),
       updatedAt: message.updatedAt.toISOString(),

@@ -7,6 +7,7 @@ import {
   OneToMany,
 } from "typeorm";
 import { MessageAttachment } from "./message-attachment.entity";
+import { MessageReaction } from "./message-reaction.entity";
 
 @Entity("messages")
 export class Message {
@@ -50,4 +51,7 @@ export class Message {
     cascade: true,
   })
   attachments!: MessageAttachment[];
+
+  @OneToMany(() => MessageReaction, (reaction) => reaction.messageId)
+  reactions!: MessageReaction[];
 }

@@ -1,4 +1,4 @@
-import { IsString, IsOptional, MinLength, MaxLength, IsUrl } from "class-validator";
+import { IsString, IsOptional, MinLength, MaxLength, IsUrl, IsBoolean } from "class-validator";
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -10,4 +10,8 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsUrl()
   avatarUrl?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  readReceiptsEnabled?: boolean;
 }

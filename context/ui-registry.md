@@ -2,7 +2,7 @@
 
 Visual consistency patterns extracted from existing components. Every new component must match these patterns.
 
-Last updated: 2026-07-17
+Last updated: 2026-07-18
 
 ---
 
@@ -404,3 +404,41 @@ Last updated: 2026-07-17
 - Icon container uses `bg-primary-500/10` (10% opacity brand color, same as Status Pill pattern)
 - Buttons use `ml-[52px]` to align with text content after the icon
 - localStorage dismiss key prevents re-showing after user acts
+
+---
+
+## SearchPanel (Full-screen overlay)
+
+File: `features/search/ui/SearchPanel.tsx`
+Last updated: 2026-07-18
+
+| Property         | Class                              |
+| ---------------- | ---------------------------------- |
+| Container        | `absolute inset-0 z-30 flex flex-col bg-bg` |
+| Header bg        | `bg-surface`                       |
+| Header border    | `border-b border-border`           |
+| Header layout    | `flex items-center gap-3 px-4 py-3` |
+| Input bg         | `bg-surface-muted`                 |
+| Input            | `w-full pl-9 pr-4 py-2.5 bg-surface-muted border border-border rounded-xl font-sans text-sm text-text placeholder:text-text-muted outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10` |
+| Close button     | `w-9 h-9 rounded-full flex items-center justify-center text-text-muted hover:bg-surface-muted transition-colors` |
+| Results item     | `w-full text-left px-4 py-3 hover:bg-surface-muted transition-colors cursor-pointer border-b border-border/50 last:border-b-0` |
+| Sender name      | `text-xs font-semibold text-text`  |
+| Timestamp        | `font-mono text-[10px] text-text-muted` |
+| Message snippet  | `text-sm text-text-muted line-clamp-2 leading-relaxed` |
+| Match highlight  | `bg-primary-500/15 text-primary-600 rounded-sm px-0.5` |
+| Conversation label | `text-[10px] font-mono text-text-muted mt-1 tracking-wide uppercase` |
+| Empty state      | `flex flex-col items-center justify-center py-16 text-text-muted` |
+| Loading spinner  | `w-6 h-6 border-[3px] border-border border-t-primary-500 rounded-full animate-spin` |
+| Empty icon       | `mb-3 opacity-40` (search icon, 32x32) |
+
+**Pattern notes:**
+- Full-screen absolute overlay (`absolute inset-0 z-30`) — sits on top of the message area, below the header
+- Header mirrors the pattern from NotificationPermissionPrompt: surface bg + border separator
+- Input uses `bg-surface-muted` (distinct from `bg-surface` used in regular inputs) — signals a temporary/overlay context
+- Close button matches the icon button pattern (circular, 36px, ghost style)
+- Search result items use `border-b border-border/50` with `last:border-b-0` for subtle separation
+- Match highlighting uses `bg-primary-500/15` (15% opacity brand) — similar to Status Pill's 10% opacity pattern
+- Conversation label uses mono uppercase at 10px — matches all-caps meta labels across the app
+- Loading spinner matches the NotificationsPanel spinner pattern exactly
+- Empty state uses `py-16` for generous vertical breathing room
+- Escape key closes the panel (keyboard accessibility)

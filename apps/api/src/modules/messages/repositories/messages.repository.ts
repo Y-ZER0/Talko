@@ -4,6 +4,7 @@ import { Repository, In } from "typeorm";
 import { Message } from "../entities/message.entity";
 import { MessageAttachment } from "../entities/message-attachment.entity";
 import { MessageReceipt } from "../entities/message-receipt.entity";
+import { MessageReaction } from "../entities/message-reaction.entity";
 
 @Injectable()
 export class MessagesRepository {
@@ -14,6 +15,8 @@ export class MessagesRepository {
     private readonly attachmentRepo: Repository<MessageAttachment>,
     @InjectRepository(MessageReceipt)
     private readonly receiptRepo: Repository<MessageReceipt>,
+    @InjectRepository(MessageReaction)
+    private readonly reactionRepo: Repository<MessageReaction>,
   ) {}
 
   async upsertReceipts(
@@ -65,7 +68,7 @@ export class MessagesRepository {
   async findById(id: string): Promise<Message | null> {
     return this.repo.findOne({
       where: { id },
-      relations: ["attachments"],
+      relations: ["attachments", "reactions"],
     });
   }
 
@@ -79,6 +82,7 @@ export class MessagesRepository {
     const queryBuilder = this.repo
       .createQueryBuilder("m")
       .leftJoinAndSelect("m.attachments", "a")
+      .leftJoinAndSelect("m.reactions", "r")
       .where("m.conversation_id = :conversationId", { conversationId })
       .orderBy("m.created_at", "DESC")
       .take(take);
@@ -124,5 +128,35 @@ export class MessagesRepository {
       .where("m.id IN (:...messageIds)", { messageIds })
       .getRawOne();
     return result?.maxCreatedAt ?? null;
+  }
+
+  async updateMessage(id: string, partial: Partial<Message>): Promise<void> {
+    await this.repo.update(id, partial);
+  }
+
+  async upsertReaction(
+    messageId: string,
+    userId: string,
+    emoji: string,
+  ): Promise<MessageReaction> {
+    const existing = await this.reactionRepo.findOne({
+      where: { messageId, userId, emoji },
+    });
+    if (existing) return existing;
+    return this.reactionRepo.save(
+      this.reactionRepo.create({ messageId, userId, emoji }),
+    );
+  }
+
+  async deleteReaction(
+    messageId: string,
+    userId: string,
+    emoji: string,
+  ): Promise<void> {
+    await this.reactionRepo.delete({ messageId, userId, emoji });
+  }
+
+  async findReactionsByMessage(messageId: string): Promise<MessageReaction[]> {
+    return this.reactionRepo.find({ where: { messageId } });
   }
 }

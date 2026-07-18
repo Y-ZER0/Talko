@@ -1,42 +1,40 @@
-# Memory — Phase 9: Push Notifications UI
+# Memory — Phase 11 Search & Filtering [UI] Complete
 
-Last updated: 2026-07-17
+Last updated: 2026-07-18
 
 ## What was built
 
-**Phase 9 `[UI]` — Permission Prompt + Notifications Settings:**
+**Phase 11 Search & Filtering [UI]:**
 
-- `packages/shared/src/dtos/notification-preferences.dto.ts` — `NotificationPreferencesDto` and `UpdateNotificationPreferencesRequest` types
-- `apps/web/src/shared/ui/components/ToggleSwitch.tsx` — shared toggle component (`role="switch"`, `aria-checked`, 44x24 token dimensions)
-- `apps/web/src/features/notifications/services/notification-preferences.service.ts` — `GET`/`PATCH /users/me/notification-preferences` frontend service
-- `apps/web/src/features/notifications/hooks/useNotificationPreferences.ts` — `useQuery` hook with key factory
-- `apps/web/src/features/settings/ui/NotificationsPanel.tsx` — 4 toggle rows (Direct messages / Sound / Mentions only / Do not disturb) with local state, no save button (save hook was deleted by request)
-- `apps/web/src/features/notifications/ui/NotificationPermissionPrompt.tsx` — fixed bottom banner, browser Notification API request, localStorage dismiss tracking
-- `apps/web/src/app/(protected)/account/notifications/page.tsx` — updated stub to render `NotificationsPanel`
-- `apps/web/src/app/(protected)/(chat)/layout.tsx` — added `NotificationPermissionPrompt` mount
-- `context/ui-registry.md` — imprinted ToggleSwitch, NotificationsPanel, NotificationPermissionPrompt patterns
+- **SearchPanel** (`apps/web/src/features/search/ui/SearchPanel.tsx`) — full-screen absolute overlay (`absolute inset-0 z-30`) triggered from header search icon. Search input with 300ms debounce, results list showing message content (with highlighted matches), sender name, timestamp, conversation name. Click result → navigates to conversation and scrolls to message with 2s highlight ring. Escape key or close button to dismiss.
+- **useDebouncedValue hook** (`apps/web/src/features/search/hooks/useDebouncedValue.ts`) — generic debounce hook, 300ms default. Prevents per-keystroke API requests (typing "hello" sends 1 request instead of 4).
+- **ConversationHeader** (`apps/web/src/features/messages/ui/ConversationHeader.tsx`) — added `onSearchClick` prop, wired to existing search icon button.
+- **MessageTimeline** (`apps/web/src/features/messages/ui/MessageTimeline.tsx`) — added `searchOpen` state, URL-based `?messageId=` param reading for cross-conversation navigation, `handleSearchResultClick` callback, renders `SearchPanel`.
+- **MessageList** (`apps/web/src/features/messages/ui/MessageList.tsx`) — added `scrollToMessageId` prop, `data-message-id` attribute on each message wrapper div, scroll-to-message effect with temporary highlight ring (primary-500/30, 2s fade).
 
 ## Decisions made
 
-- **No save button on notification panel:** The `useUpdateNotificationPreferences` hook was deleted per developer request. Toggles are local-only for now — persisting them requires a backend `[LOGIC]` task to add the preference columns and endpoints.
-- **Permission prompt is fixed bottom-center, not a modal:** Uses `role="alert"` and `position: fixed` with `z-50`. Dismissed via localStorage key so it only shows once.
-- **FCM token registration removed from prompt:** The initial prompt used dynamic `firebase/messaging` imports to auto-register after permission grant, but firebase isn't installed in the web app. Prompt now only requests browser Notification permission — token registration must be handled separately.
+- **SearchPanel is an absolute overlay on the message area**, not a sidebar panel — keeps it scoped to the conversation context, doesn't shift the three-column layout.
+- **300ms debounce on search input** — balances responsiveness with API efficiency. No lodash dependency, uses project's existing setTimeout pattern.
+- **Cross-conversation search results** navigate via URL (`?messageId=` param) so the page works with direct links. Same-conversation results scroll in-place.
+- **Sidebar All/Unread/Groups tabs** remain client-side filtered (filter the conversations list in memory) — they already work as intended, no server-side filtering needed.
+
+## Problems solved
+
+- No debounce existed in the codebase — search was firing one API request per keystroke after char 2. Created `useDebouncedValue` hook to fix.
 
 ## Current state
 
-- Phase 9 LOGIC complete. Phase 9 UI complete (minus backend preference persistence).
-- Phases 10–12 remain.
-- No database running yet.
-- `useUpdateNotificationPreferences` deleted — notification preferences panel renders toggles but changes don't persist to backend.
+- Phase 11 [LOGIC] + [UI] complete. All typechecks + lints pass across all 3 workspaces (web, api, shared).
+- Database migration applied via Supabase SQL editor.
+- Search icon in conversation header now opens SearchPanel.
+- Sidebar tabs (All/Unread/Groups) filter conversations client-side.
 
 ## Next session starts with
 
-**Start Phase 10 — Message Interactions `[LOGIC]`:**
-1. Reply (uses existing `messages.parent_id`)
-2. Edit (needs `messages.edited_at` migration)
-3. Delete (soft-delete via `is_deleted`)
-4. React (`message_reactions` CRUD)
-5. All with REST + socket broadcast per action
+Phase 12 — Appearance & Privacy Settings:
+1. Phase 12 [LOGIC] — Privacy prefs migration (`users.read_receipts_enabled`, `show_last_seen`, `allow_group_invites_from_anyone`), `blocked_contacts` table + block/unblock endpoints, `PATCH /users/me/privacy`
+2. Phase 12 [UI] — `AppearancePanel` (ThemeContext-driven: Dark/Dim/Light, accent swatches) + `PrivacyPanel` (toggles wired to Phase 12 logic, blocked contacts list, danger-zone delete account)
 
 ## Open questions
 

@@ -47,12 +47,15 @@ Mirrors `build-plan.md` exactly. Check an item **only** when the code exists, co
 - [x] `[UI]` Permission prompt + Notifications settings panel
 
 ## Phase 10 — Message Interactions (Feature 10)
-- [ ] `[LOGIC]` Reply/Edit(+migration)/Delete/React — REST + socket broadcast each
-- [ ] `[UI]` ReplyPreview, inline edit, delete confirm, ReactionBar
+- [x] `[LOGIC]` Reply/Edit/Delete/React — REST + socket broadcast each
+- [x] `[UI]` ReplyPreview, inline edit, delete confirm, ReactionBar
+
+### Refactor
+- [x] Split monolithic `chat.gateway.ts` into per-domain gateways: ConnectionGateway, ConversationGateway, MessageGateway, ReceiptGateway, MessageInteractionGateway, ReactionGateway. All on shared namespace `'/'` with single auth pass via ConnectionGateway. PresenceGateway stripped of duplicate auth.
 
 ## Phase 11 — Search & Filtering (Feature 11)
-- [ ] `[LOGIC]` search_vector migration + SearchService + endpoint
-- [ ] `[UI]` Search panel + wire All/Unread/Groups tabs to real state
+- [x] `[LOGIC]` search_vector migration + SearchService + endpoint
+- [x] `[UI]` Search panel + wire All/Unread/Groups tabs to real state
 
 ## Phase 12 — Appearance & Privacy
 - [ ] `[LOGIC]` Privacy prefs migration + blocked_contacts + endpoints
@@ -63,6 +66,7 @@ Mirrors `build-plan.md` exactly. Check an item **only** when the code exists, co
 ## Session Log (append-only, newest at top)
 | Date | Phase(s) touched | Notes / decisions made |
 |---|---|---|
+| 2026-07-18 | Phase 11.2 | Built SearchPanel UI: full-screen overlay triggered from header search icon. Search input with debounced query (2-char min via existing useSearchMessages hook), results list showing message content (with highlight), sender name, timestamp, conversation name. Clicking result navigates to conversation and scrolls to message with highlight ring. Escape/click-outside to close. Integrated into MessageTimeline with URL-based messageId param for cross-conversation navigation. Added scrollToMessageId prop + data-message-id attribute to MessageList. All typechecks + lints green across all 3 workspaces. |
 | 2026-07-13 | Phase 0 | Scaffolded full monorepo: pnpm workspaces, NestJS api, Next.js web, shared package. Installed all deps. Created initial DB migration for canonical schema. Redis module added (ioredis). Typecheck passes across all 3 workspaces. |
 | 2026-07-14 | Phase 1.1 | Built auth backend: ClerkAuthGuard (global APP_GUARD, auto-creates user on first access), @Public/@CurrentUser decorators, UsersModule (entity/service/controller/webhook). Updated invariant in architecture.md — guard now auto-creates user (not just webhook). |
 | 2026-07-14 | Phase 1.2 | Clerk frontend: middleware protection for (protected) routes (/ /chat /account), ClerkProvider in AppProviders, useCurrentUser() wrapper, auth.service.ts (getCurrentUser/updateProfile), useCurrentUserProfile TanStack Query hook. |
@@ -86,3 +90,7 @@ Mirrors `build-plan.md` exactly. Check an item **only** when the code exists, co
 | 2026-07-17 | Phase 2 gap | Implemented unread count per conversation: migration adding last_read_at to conversation_members, countUnread query in ConversationsRepository, updateLastReadAt in ConversationMembersRepository, findMaxCreatedAt in MessagesRepository, markAsRead now updates last_read_at to max message timestamp, toConversationDto now async with live unreadCount, added CONVERSATION_OPEN socket event with gateway handler, frontend emits conversation:open on entering a conversation. All typechecks green. |
 | 2026-07-17 | Phase 9.1 | Built push notifications backend: device_tokens migration + DeviceToken entity + DeviceTokensRepository + FcmService (firebase-admin v14, multicast, invalid token cleanup) + NotificationsService + register-token REST endpoint. ChatGateway.handleMessage() now checks room membership via server.in().fetchSockets() and sends FCM push to recipients not present in the conversation room. Added NotificationsModule + RealtimeModule import. Installed firebase-admin. All typechecks green. |
 | 2026-07-17 | Phase 9.2 | Built notification settings UI: ToggleSwitch shared component (role="switch", aria-checked, 44x24 token dimensions), NotificationsPanel (4 toggles: Direct messages, Sound, Mentions only, Do not disturb — dirty-state gated save button), NotificationPermissionPrompt (fixed bottom banner, browser Notification API, localStorage dismiss). Created notification-preferences.service.ts + useNotificationPreferences + useUpdateNotificationPreferences hooks. Added NotificationPreferencesDto to shared package. Wired prompt into chat layout, notifications page renders panel. All typechecks green across 3 workspaces. |
+| 2026-07-18 | Refactor | Split monolithic `chat.gateway.ts` into 6 per-domain gateways (ConnectionGateway, ConversationGateway, MessageGateway, ReceiptGateway, MessageInteractionGateway, ReactionGateway) on shared namespace `'/'`. ConnectionGateway handles auth + presence setOnline/setOffline in one pass. PresenceGateway stripped of duplicate auth. ConversationsService updated to inject ConnectionGateway. All typechecks green. |
+| 2026-07-18 | Phase 10.2 | Built Phase 10 UI: ReplyPreview, MessageActions (emoji bar + Edit/Delete menu), ReactionPills (grouped counts, toggle), DeleteConfirmModal. Wired reactions into MessageDto + API entity JOINs. Frontend hooks: useEditMessage, useDeleteMessage, useReaction, useReplyTo. Modified MessageBubble (hover state, inline edit, deleted placeholder, reaction pills), MessageComposer (reply preview), MessageList (socket listeners for edits/deletes/reactions), MessageTimeline (orchestrator). Refactored: extracted useRealtimeMessages hook, ConversationHeader, ToolbarButton, PendingUploadList, InlineEditor. Removed dead code, fixed toggle reaction bug. All typechecks + lints green. |
+| 2026-07-18 | Phase 10.1 | Built Message Interactions LOGIC: `edit()`/`delete()`/`addReaction()`/`removeReaction()` in MessagesService, `updateMessage()`/`upsertReaction()`/`deleteReaction()` in MessagesRepository, REST endpoints (PATCH/DELETE/:messageId, POST/DELETE :messageId/reactions), `MessageInteractionGateway` (MESSAGE_EDIT, MESSAGE_DELETE), `ReactionGateway` (REACTION_ADD, REACTION_REMOVE). No schema changes needed — all columns/tables already in place. All typechecks green. |
+| 2026-07-18 | Phase 11.1 | Built Search & Filtering LOGIC: Supabase SQL migration adding `search_vector` (tsvector generated column) + GIN index to messages table. Created `SearchResultDto` (messageId, messageContent, messageTimestamp, senderName, conversationId) in shared package. Built `SearchModule` (service, controller) — `GET /search?q=` with tsquery builder, scoped to user's conversations via conversation_members JOIN, ranks by ts_rank, excludes deleted messages, LIMIT 20. Frontend: `search.service.ts` + `searchKeys.ts` + `useSearchMessages.ts` (useQuery, enabled when query >= 2 chars, 30s staleTime). All typechecks + lints green across 3 workspaces. |
