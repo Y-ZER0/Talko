@@ -22,6 +22,16 @@ export class UsersRepository {
     return this.repo.findOne({ where: { username } });
   }
 
+  async searchByUsername(query: string, excludeUserId: string): Promise<User[]> {
+    return this.repo
+      .createQueryBuilder("u")
+      .where("u.username ILIKE :pattern", { pattern: `%${query}%` })
+      .andWhere("u.id != :excludeUserId", { excludeUserId })
+      .orderBy("u.username", "ASC")
+      .limit(10)
+      .getMany();
+  }
+
   async save(user: Partial<User>): Promise<User> {
     return this.repo.save(user);
   }

@@ -64,6 +64,12 @@ export class UsersService {
     return user.readReceiptsEnabled;
   }
 
+  async searchByUsername(query: string, currentUserId: string): Promise<User[]> {
+    const sanitized = query.replace(/[^\w]/g, "").trim();
+    if (!sanitized) return [];
+    return this.usersRepository.searchByUsername(sanitized, currentUserId);
+  }
+
   async updateProfile(
     userId: string,
     data: { username?: string; avatarUrl?: string; readReceiptsEnabled?: boolean },

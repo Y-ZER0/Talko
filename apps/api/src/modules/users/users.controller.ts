@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Body } from "@nestjs/common";
+import { Controller, Get, Patch, Body, Query } from "@nestjs/common";
 import { UsersService } from "./users.service";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
@@ -11,6 +11,19 @@ export class UsersController {
   @Get("me")
   getProfile(@CurrentUser() user: User) {
     return user;
+  }
+
+  @Get("search")
+  async searchUsers(
+    @CurrentUser() user: User,
+    @Query("q") query: string,
+  ) {
+    const users = await this.usersService.searchByUsername(query, user.id);
+    return users.map((u) => ({
+      id: u.id,
+      username: u.username,
+      avatarUrl: u.avatarUrl,
+    }));
   }
 
   @Patch("me")
