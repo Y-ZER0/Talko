@@ -7,7 +7,7 @@ export function CurrentUserBar() {
   const { data: profile } = useCurrentUserProfile();
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3 border-t border-border">
+    <div className="flex items-center gap-3 px-4 py-3.5 border-t border-border bg-surface">
       <Avatar
         name={profile?.username ?? "You"}
         userId={profile?.id ?? ""}
@@ -19,18 +19,18 @@ export function CurrentUserBar() {
         <p className="text-sm font-medium text-text truncate">
           {profile?.username ?? "You"}
         </p>
-        <p className="text-[10px] font-mono text-text-muted tracking-label uppercase">
+        <p className="text-[10px] font-mono text-text-muted tracking-label uppercase mt-0.5">
           Manage Profile
         </p>
       </div>
       <a
         href="/account/profile"
-        className="w-8 h-8 rounded-full flex items-center justify-center text-text-muted hover:bg-surface-muted transition-colors"
+        className="w-9 h-9 rounded-full flex items-center justify-center text-text-muted hover:bg-surface-muted hover:text-text active:scale-95 transition-all duration-150"
         aria-label="Manage profile"
       >
         <svg
-          width="16"
-          height="16"
+          width="17"
+          height="17"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"

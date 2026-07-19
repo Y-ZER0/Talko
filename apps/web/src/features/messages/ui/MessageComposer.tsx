@@ -165,6 +165,7 @@ export function MessageComposer({
 
   const uploading = pendingUploads.some((u) => u.status === "uploading");
   const readyCount = pendingUploads.filter((u) => u.status === "done").length;
+  const canSend = (content.trim() || readyCount > 0) && !sendMessage.isPending && !disabled && !uploading;
 
   return (
     <div className="border-t border-border bg-surface">
@@ -175,10 +176,10 @@ export function MessageComposer({
           onCancel={onCancelReply ?? (() => {})}
         />
       )}
-      <div className="px-4 py-3">
+      <div className="px-5 py-3.5">
         <PendingUploadList uploads={pendingUploads} onRemove={removeUpload} />
 
-        <div className="flex items-end gap-2">
+        <div className="flex items-end gap-1.5">
           <input
             ref={fileInputRef}
             type="file"
@@ -227,7 +228,7 @@ export function MessageComposer({
               placeholder={`Message ${displayName}...`}
               disabled={disabled || sendMessage.isPending || uploading}
               rows={1}
-              className="w-full px-4 py-2.5 bg-surface-muted border-0 rounded-xl text-sm text-text placeholder:text-text-muted resize-none outline-none focus:ring-2 focus:ring-primary-500/20 disabled:opacity-50"
+              className="w-full px-4 py-2.5 bg-surface-muted border border-transparent rounded-xl text-sm text-text placeholder:text-text-muted resize-none outline-none transition-shadow focus:border-primary-500/30 focus:ring-4 focus:ring-primary-500/10 disabled:opacity-50"
               style={{ maxHeight: "120px" }}
             />
           </div>
@@ -251,7 +252,7 @@ export function MessageComposer({
 
           <ToolbarButton
             onClick={handleSubmit}
-            disabled={(!content.trim() && readyCount === 0) || sendMessage.isPending || disabled || uploading}
+            disabled={!canSend}
             label="Send message"
             variant="primary"
           >

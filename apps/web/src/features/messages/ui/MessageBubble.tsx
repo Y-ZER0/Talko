@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { Avatar } from "@/shared/ui/components/Avatar";
 import { ReadReceiptIcon } from "@/features/receipts/ui/ReadReceiptIcon";
-import { ImageAttachmentCard } from "@/features/media/ui/ImageAttachmentCard";
-import { FileAttachmentRow } from "@/features/media/ui/FileAttachmentRow";
-import { VoiceNoteBubble } from "@/features/media/ui/VoiceNoteBubble";
 import { MessageActions } from "./MessageActions";
 import { ReactionPills } from "./ReactionPills";
-import { MessageMediaType } from "@repo/shared";
+import { AttachmentsRenderer } from "./AttachmentsRenderer";
+import { InlineEditor } from "./InlineEditor";
+import { formatMessageTime } from "./formatMessageTime";
 import type { MessageDto } from "@repo/shared";
 
 interface MessageBubbleProps {
@@ -26,113 +25,6 @@ interface MessageBubbleProps {
   onStartEdit?: (messageId: string) => void;
   onSaveEdit?: (messageId: string, content: string) => void;
   onCancelEdit?: () => void;
-}
-
-function formatMessageTime(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-}
-
-function AttachmentsRenderer({
-  attachments,
-  isOwn,
-}: {
-  attachments: MessageDto["attachments"];
-  isOwn: boolean;
-}) {
-  if (!attachments || attachments.length === 0) return null;
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      {attachments.map((att) => {
-        switch (att.mediaType) {
-          case MessageMediaType.IMAGE:
-          case MessageMediaType.VIDEO:
-            return <ImageAttachmentCard key={att.id} attachment={att} />;
-          case MessageMediaType.AUDIO:
-            return <VoiceNoteBubble key={att.id} attachment={att} isOwn={isOwn} />;
-          case MessageMediaType.DOCUMENT:
-          default:
-            return <FileAttachmentRow key={att.id} attachment={att} />;
-        }
-      })}
-    </div>
-  );
-}
-
-function InlineEditor({
-  initialContent,
-  onSave,
-  onCancel,
-}: {
-  initialContent: string;
-  onSave: (content: string) => void;
-  onCancel: () => void;
-}) {
-  const [value, setValue] = useState(initialContent);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    setValue(initialContent);
-  }, [initialContent]);
-
-  useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.setSelectionRange(
-        inputRef.current.value.length,
-        inputRef.current.value.length,
-      );
-    }
-  }, []);
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      if (value.trim()) onSave(value.trim());
-    }
-    if (e.key === "Escape") onCancel();
-  };
-
-  return (
-    <div className="absolute inset-0 z-20">
-      <div className="flex flex-col gap-1 bg-surface border border-primary-500 rounded-2xl shadow-lg p-2">
-        <textarea
-          ref={inputRef}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          rows={1}
-          className="w-full px-3 py-2 bg-surface-muted rounded-xl text-sm text-text resize-none outline-none focus:ring-2 focus:ring-primary-500/20"
-          style={{ maxHeight: "120px" }}
-        />
-        <div className="flex items-center justify-end gap-1">
-          <button
-            type="button"
-            onClick={() => {
-              onCancel();
-              setValue(initialContent);
-            }}
-            className="px-2 py-1 rounded-lg text-xs text-text-muted hover:bg-surface-muted transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => value.trim() && onSave(value.trim())}
-            disabled={!value.trim()}
-            className="px-2 py-1 rounded-lg text-xs font-medium text-text-inverse bg-primary-500 hover:bg-primary-600 transition-colors disabled:opacity-50"
-          >
-            Save
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export function MessageBubble({
@@ -220,7 +112,7 @@ export function MessageBubble({
             className={
               hasAttachments && !message.content
                 ? ""
-                : `px-4 py-2.5 ${
+                : `px-4 py-2.5 shadow-sm ${
                     isOwn
                       ? "bg-primary-500 text-text-inverse rounded-2xl rounded-br-md"
                       : "bg-surface text-text rounded-2xl rounded-bl-md border border-border"
@@ -238,7 +130,9 @@ export function MessageBubble({
             )}
             <AttachmentsRenderer attachments={message.attachments} isOwn={isOwn} />
             {message.editedAt && (
-              <p className="text-[10px] opacity-60 mt-0.5">edited</p>
+              <p className="text-[10px] font-mono opacity-60 mt-1 tracking-label uppercase">
+                edited
+              </p>
             )}
           </div>
 
@@ -271,7 +165,7 @@ export function MessageBubble({
 
       {showTimestamp && (
         <div className={`flex items-center gap-1.5 px-1 ${isOwn ? "flex-row-reverse" : ""}`}>
-          <span className="font-mono text-[10px] text-text-muted">
+          <span className="font-mono text-[10px] text-text-muted tracking-wide">
             {formatMessageTime(message.createdAt)}
           </span>
           {isOwn && <ReadReceiptIcon messageId={message.id} />}

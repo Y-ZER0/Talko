@@ -34,14 +34,14 @@ export function ReactionPills({ reactions, currentUserId, onToggleReaction }: Re
           key={pill.emoji}
           type="button"
           onClick={() => onToggleReaction(pill.emoji)}
-          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition-colors ${
+          className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs border transition-colors ${
             pill.hasOwn
-              ? "bg-primary-500/10 border-primary-500/30 text-primary-600"
-              : "bg-surface-muted border-border text-text-muted hover:border-primary-500/30"
+              ? "bg-primary-500/10 border-primary-500/40 text-primary-600"
+              : "bg-surface border-border text-text-muted hover:border-primary-500/30 hover:bg-surface-muted"
           }`}
         >
           <span>{pill.emoji}</span>
-          <span className="font-mono">{pill.count}</span>
+          <span className="font-mono text-[11px]">{pill.count}</span>
         </button>
       ))}
     </div>

@@ -10,19 +10,20 @@ export function ReplyPreview({ senderName, content, onCancel }: ReplyPreviewProp
   const truncated = content.length > 80 ? content.slice(0, 80) + "..." : content;
 
   return (
-    <div className="flex items-center gap-2 px-4 py-2 bg-surface-muted border-b border-border">
+    <div className="flex items-center gap-3 pl-3.5 pr-3 py-2.5 bg-surface-muted border-b border-border">
+      <div className="w-0.5 self-stretch rounded-full bg-primary-500 shrink-0" />
       <div className="flex-1 min-w-0">
         <p className="text-xs font-semibold text-primary-500">
           Replying to {senderName}
         </p>
         {truncated && (
-          <p className="text-xs text-text-muted truncate">{truncated}</p>
+          <p className="text-xs text-text-muted truncate mt-0.5">{truncated}</p>
         )}
       </div>
       <button
         type="button"
         onClick={onCancel}
-        className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-text-muted hover:bg-border transition-colors"
+        className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-text-muted hover:bg-border transition-colors"
         aria-label="Cancel reply"
       >
         <svg

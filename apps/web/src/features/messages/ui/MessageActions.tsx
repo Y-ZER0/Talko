@@ -31,7 +31,7 @@ export function MessageActions({ isOwn, onEdit, onDelete, onReact }: MessageActi
     <div className="relative">
       {/* Reaction bar on hover */}
       {showEmojiBar && (
-        <div className="absolute bottom-full mb-1 left-0 flex items-center gap-0.5 bg-surface border border-border rounded-full px-1.5 py-1 shadow-lg z-10">
+        <div className="absolute bottom-full mb-1.5 left-0 flex items-center gap-0.5 bg-surface border border-border rounded-full px-1.5 py-1 shadow-lg z-10">
           {QUICK_EMOJI.map((emoji) => (
             <button
               key={emoji}
@@ -40,7 +40,7 @@ export function MessageActions({ isOwn, onEdit, onDelete, onReact }: MessageActi
                 onReact(emoji);
                 setShowEmojiBar(false);
               }}
-              className="w-7 h-7 rounded-full flex items-center justify-center text-sm hover:bg-surface-muted transition-colors"
+              className="w-7 h-7 rounded-full flex items-center justify-center text-sm hover:bg-surface-muted hover:scale-110 transition-transform"
             >
               {emoji}
             </button>
@@ -62,7 +62,7 @@ export function MessageActions({ isOwn, onEdit, onDelete, onReact }: MessageActi
       {showMenu && (
         <div
           ref={menuRef}
-          className="absolute top-full mt-1 right-0 bg-surface border border-border rounded-xl shadow-lg z-10 py-1 min-w-[140px]"
+          className="absolute top-full mt-1.5 right-0 bg-surface border border-border rounded-xl shadow-lg z-10 py-1.5 min-w-[150px]"
         >
           <button
             type="button"
@@ -70,7 +70,7 @@ export function MessageActions({ isOwn, onEdit, onDelete, onReact }: MessageActi
               setShowMenu(false);
               onReact("👍");
             }}
-            className="w-full px-3 py-2 text-left text-sm text-text hover:bg-surface-muted transition-colors flex items-center gap-2"
+            className="w-full px-3.5 py-2 text-left text-sm text-text hover:bg-surface-muted transition-colors flex items-center gap-2.5"
           >
             <span>👍</span> React
           </button>
@@ -82,7 +82,7 @@ export function MessageActions({ isOwn, onEdit, onDelete, onReact }: MessageActi
                   setShowMenu(false);
                   onEdit();
                 }}
-                className="w-full px-3 py-2 text-left text-sm text-text hover:bg-surface-muted transition-colors flex items-center gap-2"
+                className="w-full px-3.5 py-2 text-left text-sm text-text hover:bg-surface-muted transition-colors flex items-center gap-2.5"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
@@ -95,7 +95,7 @@ export function MessageActions({ isOwn, onEdit, onDelete, onReact }: MessageActi
                   setShowMenu(false);
                   onDelete();
                 }}
-                className="w-full px-3 py-2 text-left text-sm text-danger hover:bg-danger-bg transition-colors flex items-center gap-2"
+                className="w-full px-3.5 py-2 text-left text-sm text-danger hover:bg-danger-bg transition-colors flex items-center gap-2.5"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M3 6h18" />
@@ -109,13 +109,13 @@ export function MessageActions({ isOwn, onEdit, onDelete, onReact }: MessageActi
         </div>
       )}
 
-      {/* Hover trigger buttons */}
+      {/* Hover trigger buttons — visible at rest on touch, hover-revealed on desktop */}
       {!showEmojiBar && !showMenu && (
-        <div className="absolute top-1/2 -translate-y-1/2 right-0 translate-x-full flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
+        <div className="absolute top-1/2 -translate-y-1/2 right-0 translate-x-full flex items-center gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity ml-1">
           <button
             type="button"
             onClick={() => setShowEmojiBar(true)}
-            className="w-7 h-7 rounded-full flex items-center justify-center text-text-muted hover:bg-surface-muted transition-colors"
+            className="w-7 h-7 rounded-full flex items-center justify-center text-text-muted bg-surface shadow-sm border border-border md:bg-transparent md:shadow-none md:border-transparent hover:bg-surface-muted transition-colors"
             aria-label="React"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -129,7 +129,7 @@ export function MessageActions({ isOwn, onEdit, onDelete, onReact }: MessageActi
             <button
               type="button"
               onClick={() => setShowMenu(true)}
-              className="w-7 h-7 rounded-full flex items-center justify-center text-text-muted hover:bg-surface-muted transition-colors"
+              className="w-7 h-7 rounded-full flex items-center justify-center text-text-muted bg-surface shadow-sm border border-border md:bg-transparent md:shadow-none md:border-transparent hover:bg-surface-muted transition-colors"
               aria-label="More options"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

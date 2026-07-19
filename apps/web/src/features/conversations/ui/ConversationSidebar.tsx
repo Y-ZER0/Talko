@@ -39,12 +39,13 @@ export function ConversationSidebar() {
 
   return (
     <aside className="flex flex-col h-full bg-bg border-r border-border">
-      <div className="flex items-center justify-between px-4 pt-5 pb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-text flex items-center justify-center">
+      {/* Brand header */}
+      <div className="flex items-center justify-between px-5 pt-6 pb-4">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-text flex items-center justify-center shadow-sm">
             <svg
-              width="16"
-              height="16"
+              width="17"
+              height="17"
               viewBox="0 0 24 24"
               fill="none"
               stroke="white"
@@ -56,10 +57,11 @@ export function ConversationSidebar() {
             </svg>
           </div>
           <div>
-            <h1 className="text-sm font-semibold text-text leading-tight">
+            <h1 className="text-sm font-semibold text-text leading-tight tracking-tight">
               Talko
             </h1>
-            <p className="text-[10px] font-mono text-online tracking-label uppercase">
+            <p className="flex items-center gap-1 text-[10px] font-mono text-online tracking-label uppercase mt-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-online animate-pulse" />
               Connected
             </p>
           </div>
@@ -67,7 +69,7 @@ export function ConversationSidebar() {
         <button
           type="button"
           onClick={() => setIsNewConversationOpen(true)}
-          className="w-8 h-8 rounded-full bg-surface-muted flex items-center justify-center text-text-muted hover:bg-surface hover:text-text transition-colors"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-text-muted bg-surface-muted hover:bg-primary-500 hover:text-text-inverse active:scale-95 transition-all duration-150"
           aria-label="New conversation"
         >
           <svg
@@ -86,12 +88,13 @@ export function ConversationSidebar() {
         </button>
       </div>
 
-      <div className="px-4 pb-3">
+      {/* Search */}
+      <div className="px-5 pb-3">
         <div className="relative">
           <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-            width="14"
-            height="14"
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+            width="15"
+            height="15"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -107,20 +110,21 @@ export function ConversationSidebar() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search conversations..."
-            className="w-full pl-9 pr-4 py-2.5 bg-surface border border-border rounded-xl font-sans text-sm text-text placeholder:text-text-muted outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10"
+            className="w-full pl-10 pr-4 py-2.5 bg-surface border border-border rounded-xl font-sans text-sm text-text placeholder:text-text-muted outline-none transition-shadow focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10"
           />
         </div>
       </div>
 
-      <div className="flex gap-1 px-4 pb-3">
+      {/* Filter tabs */}
+      <div className="flex gap-1.5 px-5 pb-4">
         {(["all", "unread", "groups"] as const).map((tab) => (
           <button
             key={tab}
             type="button"
             onClick={() => setActiveTab(tab)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium capitalize transition-colors ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-medium capitalize transition-colors ${
               activeTab === tab
-                ? "bg-surface text-text"
+                ? "bg-text text-text-inverse"
                 : "bg-transparent text-text-muted hover:bg-surface-muted"
             }`}
           >
@@ -129,25 +133,47 @@ export function ConversationSidebar() {
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      {/* Conversation list */}
+      <div className="flex-1 overflow-y-auto px-2">
         {isLoading ? (
-          <div className="flex items-center justify-center py-12 text-text-muted text-sm">
-            Loading conversations...
+          <div className="flex flex-col gap-2 px-3 pt-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 px-2 py-2.5 animate-pulse">
+                <div className="w-8 h-8 rounded-full bg-surface-muted shrink-0" />
+                <div className="flex-1 flex flex-col gap-1.5">
+                  <div className="h-2.5 w-24 rounded-full bg-surface-muted" />
+                  <div className="h-2 w-36 rounded-full bg-surface-muted" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : searched.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-text-muted text-sm gap-1">
-            <p>No conversations found</p>
+          <div className="flex flex-col items-center justify-center py-16 px-6 text-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-surface-muted flex items-center justify-center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-muted">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-text">No conversations found</p>
+              <p className="text-xs text-text-muted mt-0.5">
+                {searchQuery ? "Try a different search term" : "Start a new conversation to get going"}
+              </p>
+            </div>
           </div>
         ) : (
-          searched.map((c) => (
-            <ConversationListItem
-              key={c.id}
-              conversation={c}
-              isActive={c.id === activeConversationId}
-              onClick={() => router.push(`/${c.id}`)}
-              currentUserId={profile?.id}
-            />
-          ))
+          <div className="flex flex-col gap-0.5 pb-2">
+            {searched.map((c) => (
+              <ConversationListItem
+                key={c.id}
+                conversation={c}
+                isActive={c.id === activeConversationId}
+                onClick={() => router.push(`/${c.id}`)}
+                currentUserId={profile?.id}
+              />
+            ))}
+          </div>
         )}
       </div>
 
