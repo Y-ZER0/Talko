@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { Avatar } from "@/shared/ui/components/Avatar";
 import { ReadReceiptIcon } from "@/features/receipts/ui/ReadReceiptIcon";
+import { ReadByPopover } from "@/features/receipts/ui/ReadByPopover";
+import { useReceipts } from "@/features/receipts/hooks/useReceipts";
 import { MessageActions } from "./MessageActions";
 import { ReactionPills } from "./ReactionPills";
 import { AttachmentsRenderer } from "./AttachmentsRenderer";
-import { InlineEditor } from "./InlineEditor";
 import { formatMessageTime } from "./formatMessageTime";
 import type { MessageDto } from "@repo/shared";
 
@@ -24,8 +25,7 @@ interface MessageBubbleProps {
   onReply?: (message: MessageDto) => void;
   editingMessageId?: string;
   onStartEdit?: (messageId: string) => void;
-  onSaveEdit?: (messageId: string, content: string) => void;
-  onCancelEdit?: () => void;
+  members?: { user: { id: string; username: string } }[];
 }
 
 export function MessageBubble({
@@ -42,10 +42,13 @@ export function MessageBubble({
   onReply,
   editingMessageId,
   onStartEdit,
-  onSaveEdit,
-  onCancelEdit,
+  members,
 }: MessageBubbleProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const [showReadBy, setShowReadBy] = useState(false);
+  const { getReceipts } = useReceipts();
+  const readReceipts = isOwn ? getReceipts(message.id) : [];
+  const hasReadBy = readReceipts.some((r) => r.status === "read");
 
   const isEditing = editingMessageId === message.id;
 
@@ -155,14 +158,6 @@ export function MessageBubble({
               </p>
             )}
           </div>
-
-          {isEditing && (
-            <InlineEditor
-              initialContent={message.content ?? ""}
-              onSave={(content) => onSaveEdit?.(message.id, content)}
-              onCancel={() => onCancelEdit?.()}
-            />
-          )}
         </div>
 
         {!isEditing && (
@@ -190,7 +185,32 @@ export function MessageBubble({
             {formatMessageTime(message.createdAt)}
           </span>
         )}
-        {isOwn && <ReadReceiptIcon messageId={message.id} />}
+        {isOwn && (
+          <div className="relative">
+            <ReadReceiptIcon messageId={message.id} />
+            {hasReadBy && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowReadBy((p) => !p)}
+                  className="inline-flex items-center justify-center w-4 h-4 text-text-muted hover:text-text transition-colors ml-0.5"
+                  aria-label="Show who read this message"
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+                {showReadBy && (
+                  <ReadByPopover
+                    receipts={readReceipts}
+                    members={members}
+                    onClose={() => setShowReadBy(false)}
+                  />
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

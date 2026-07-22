@@ -90,7 +90,7 @@ export function useSendMessage(conversationId: string, currentUserId?: string) {
         conversationId,
         senderId: effectiveUserId ?? "",
         parentId: data.parentId ?? null,
-        parentMessage: null,
+        parentMessage: data.parentMessage ?? null,
         content: data.content ?? null,
         attachments: (data.attachments ?? []).map((a, i) => ({
           id: `temp-att-${data.clientId}-${i}`,

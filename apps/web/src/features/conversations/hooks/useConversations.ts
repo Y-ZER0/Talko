@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { SocketEvent } from "@repo/shared";
@@ -12,7 +12,11 @@ import type { ConversationDto, MessageDto } from "@repo/shared";
 export function useConversations() {
   const { getToken, isSignedIn } = useAuth();
   const queryClient = useQueryClient();
+  const queryClientRef = useRef(queryClient);
+  queryClientRef.current = queryClient;
   const { socket } = useSocket();
+  const socketRef = useRef(socket);
+  socketRef.current = socket;
 
   const query = useQuery<ConversationDto[]>({
     queryKey: conversationKeys.list(),
@@ -26,37 +30,34 @@ export function useConversations() {
   });
 
   useEffect(() => {
-    if (!socket) return;
+    const s = socketRef.current;
+    const qc = queryClientRef.current;
+    if (!s) return;
 
-    const handleNewConversation = () => {
-      queryClient.invalidateQueries({ queryKey: conversationKeys.list() });
+    const invalidate = () => {
+      qc.invalidateQueries({ queryKey: conversationKeys.list() });
     };
 
-    const handleLeaveConversation = () => {
-      queryClient.invalidateQueries({ queryKey: conversationKeys.list() });
-    };
+    const handleNewConversation = () => invalidate();
+    const handleLeaveConversation = () => invalidate();
+    const handleDeletedConversation = () => invalidate();
+    const handleMessageNew = (_message: MessageDto) => invalidate();
+    const handleConversationOpened = () => invalidate();
 
-    const handleDeletedConversation = () => {
-      queryClient.invalidateQueries({ queryKey: conversationKeys.list() });
-    };
+    s.on(SocketEvent.CONVERSATION_NEW, handleNewConversation);
+    s.on(SocketEvent.CONVERSATION_LEAVE, handleLeaveConversation);
+    s.on(SocketEvent.CONVERSATION_DELETED, handleDeletedConversation);
+    s.on(SocketEvent.MESSAGE_NEW, handleMessageNew);
+    s.on(SocketEvent.CONVERSATION_OPENED, handleConversationOpened);
 
-    const handleMessageNew = (_message: MessageDto) => {
-      queryClient.invalidateQueries({ queryKey: conversationKeys.list() });
-    };
-
-    socket.on(SocketEvent.CONVERSATION_NEW, handleNewConversation);
-    socket.on(SocketEvent.CONVERSATION_LEAVE, handleLeaveConversation);
-    socket.on(SocketEvent.CONVERSATION_DELETED, handleDeletedConversation);
-    socket.on(SocketEvent.MESSAGE_NEW, handleMessageNew);
-    socket.on(SocketEvent.CONVERSATION_OPENED, handleNewConversation);
     return () => {
-      socket.off(SocketEvent.CONVERSATION_NEW, handleNewConversation);
-      socket.off(SocketEvent.CONVERSATION_LEAVE, handleLeaveConversation);
-      socket.off(SocketEvent.CONVERSATION_DELETED, handleDeletedConversation);
-      socket.off(SocketEvent.MESSAGE_NEW, handleMessageNew);
-      socket.off(SocketEvent.CONVERSATION_OPENED, handleNewConversation);
+      s.off(SocketEvent.CONVERSATION_NEW, handleNewConversation);
+      s.off(SocketEvent.CONVERSATION_LEAVE, handleLeaveConversation);
+      s.off(SocketEvent.CONVERSATION_DELETED, handleDeletedConversation);
+      s.off(SocketEvent.MESSAGE_NEW, handleMessageNew);
+      s.off(SocketEvent.CONVERSATION_OPENED, handleConversationOpened);
     };
-  }, [socket, queryClient]);
+  }, [socket]);
 
   return query;
 }

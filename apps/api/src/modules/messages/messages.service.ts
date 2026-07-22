@@ -280,7 +280,7 @@ export class MessagesService {
 
   toDto(
     message: Message,
-    receipt?: { userId: string; status: string; readAt: Date | null },
+    receipts?: { userId: string; status: string; readAt: Date | null }[],
     parentMessage?: ParentMessageDto,
   ): MessageDto {
     return {
@@ -292,9 +292,11 @@ export class MessagesService {
       content: message.content ?? null,
       attachments: (message.attachments ?? []).map((a) => this.attachmentToDto(a)),
       reactions: (message.reactions ?? []).map((r) => this.reactionToDto(r)),
-      receipts: receipt
-        ? [{ userId: receipt.userId, status: receipt.status, readAt: receipt.readAt?.toISOString() ?? null }]
-        : [],
+      receipts: (receipts ?? []).map((r) => ({
+        userId: r.userId,
+        status: r.status,
+        readAt: r.readAt?.toISOString() ?? null,
+      })),
       isDeleted: message.isDeleted,
       createdAt: message.createdAt.toISOString(),
       updatedAt: message.updatedAt.toISOString(),

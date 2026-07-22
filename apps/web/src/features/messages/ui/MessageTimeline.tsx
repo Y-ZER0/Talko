@@ -12,15 +12,20 @@ import { useConversation } from "@/features/conversations/hooks/useConversation"
 import { conversationKeys } from "@/features/conversations/hooks/conversationKeys";
 import { getDisplayName } from "@/features/conversations/lib/conversation-helpers";
 import { SharedMediaPanel } from "@/features/media/ui/SharedMediaPanel";
+import { GroupMembersPanel } from "@/features/conversations/ui/GroupMembersPanel";
 import { SearchPanel } from "@/features/search/ui/SearchPanel";
 import { useEditMessage } from "../hooks/useEditMessage";
 import { useDeleteMessage } from "../hooks/useDeleteMessage";
 import { useReaction } from "../hooks/useReaction";
 import { useReplyTo } from "../hooks/useReplyTo";
+import type { InfiniteData } from "@tanstack/react-query";
+import { messageKeys } from "../hooks/messageKeys";
+import type { MessagesCursorResponse } from "@repo/shared";
 import { ConversationHeader } from "./ConversationHeader";
 import { MessageList } from "./MessageList";
 import { MessageComposer } from "./MessageComposer";
 import { DeleteConfirmModal } from "./DeleteConfirmModal";
+import { InlineEditor } from "./InlineEditor";
 import { SocketEvent } from "@repo/shared";
 
 interface MessageTimelineProps {
@@ -29,6 +34,7 @@ interface MessageTimelineProps {
 
 export function MessageTimeline({ conversationId }: MessageTimelineProps) {
   const [infoPanelOpen, setInfoPanelOpen] = useState(false);
+  const [membersPanelOpen, setMembersPanelOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
@@ -50,6 +56,17 @@ export function MessageTimeline({ conversationId }: MessageTimelineProps) {
   const { addReaction, removeReaction } = useReaction(conversationId, currentUserId);
   const { replyTarget, startReply, cancelReply } = useReplyTo();
 
+  const editingMessage = editingMessageId
+    ? (() => {
+        const data = queryClient.getQueryData<InfiniteData<MessagesCursorResponse>>(
+          messageKeys.list(conversationId),
+        );
+        return data?.pages
+          .flatMap((p: MessagesCursorResponse) => p.data)
+          .find((m) => m.id === editingMessageId) ?? null;
+      })()
+    : null;
+
   const displayName = conversation
     ? getDisplayName(conversation, currentUserId)
     : "Chat";
@@ -68,7 +85,13 @@ export function MessageTimeline({ conversationId }: MessageTimelineProps) {
     joinRoom(conversationId);
     if (socket?.connected) {
       socket.emit(SocketEvent.CONVERSATION_OPEN, { conversationId });
-      queryClient.invalidateQueries({ queryKey: conversationKeys.list() });
+      const timer = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: conversationKeys.list() });
+      }, 200);
+      return () => {
+        clearTimeout(timer);
+        leaveRoom(conversationId);
+      };
     }
     return () => {
       leaveRoom(conversationId);
@@ -182,6 +205,9 @@ export function MessageTimeline({ conversationId }: MessageTimelineProps) {
           infoPanelOpen={infoPanelOpen}
           onToggleInfoPanel={() => setInfoPanelOpen((p) => !p)}
           onSearchClick={() => setSearchOpen(true)}
+          isGroup={conversation?.isGroup}
+          membersPanelOpen={membersPanelOpen}
+          onToggleMembersPanel={conversation?.isGroup ? () => setMembersPanelOpen((p) => !p) : undefined}
         />
 
         <MessageList
@@ -190,8 +216,6 @@ export function MessageTimeline({ conversationId }: MessageTimelineProps) {
           editingMessageId={editingMessageId ?? undefined}
           scrollToMessageId={scrollToMessageId ?? undefined}
           onStartEdit={handleStartEdit}
-          onSaveEdit={handleSaveEdit}
-          onCancelEdit={handleCancelEdit}
           onAddReaction={handleAddReaction}
           onRemoveReaction={handleRemoveReaction}
           onDelete={handleRequestDelete}
@@ -226,10 +250,36 @@ export function MessageTimeline({ conversationId }: MessageTimelineProps) {
         </>
       )}
 
+      {membersPanelOpen && conversation?.isGroup && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/20 lg:hidden"
+            onClick={() => setMembersPanelOpen(false)}
+          />
+          <div className="hidden lg:block w-[320px] shrink-0 border-l border-border">
+            <GroupMembersPanel members={conversation.members} />
+          </div>
+          <div className="fixed right-0 top-0 bottom-0 z-50 w-[320px] lg:hidden">
+            <GroupMembersPanel
+              members={conversation.members}
+              onClose={() => setMembersPanelOpen(false)}
+            />
+          </div>
+        </>
+      )}
+
       {deletingMessageId && (
         <DeleteConfirmModal
           onConfirm={handleConfirmDelete}
           onCancel={handleCancelDelete}
+        />
+      )}
+
+      {editingMessage && (
+        <InlineEditor
+          originalContent={editingMessage.content ?? ""}
+          onSave={(content) => handleSaveEdit(editingMessage.id, content)}
+          onCancel={handleCancelEdit}
         />
       )}
 

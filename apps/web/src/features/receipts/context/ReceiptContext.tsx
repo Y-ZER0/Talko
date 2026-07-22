@@ -13,11 +13,11 @@ import { useSocket } from "@/features/presence/hooks/useSocket";
 import { SocketEvent } from "@repo/shared";
 import type { ReceiptUpdateEventPayload, MessageReceiptDto } from "@repo/shared";
 
-type ReceiptMap = Map<string, ReceiptUpdateEventPayload>;
+type ReceiptMap = Map<string, ReceiptUpdateEventPayload[]>;
 
 interface ReceiptContextValue {
-  getReceipt: (messageId: string) => ReceiptUpdateEventPayload | undefined;
-  seedReceipts: (messageReceipts: Map<string, MessageReceiptDto>) => void;
+  getReceipts: (messageId: string) => ReceiptUpdateEventPayload[];
+  seedReceipts: (messageReceipts: Map<string, MessageReceiptDto[]>) => void;
 }
 
 export const ReceiptContext = createContext<ReceiptContextValue | null>(null);
@@ -35,7 +35,17 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
     setReceipts((prev) => {
       const next = new Map(prev);
       for (const update of batch) {
-        next.set(update.messageId, update);
+        const existing = next.get(update.messageId);
+        if (existing) {
+          const idx = existing.findIndex((r) => r.userId === update.userId);
+          if (idx >= 0) {
+            existing[idx] = update;
+          } else {
+            existing.push(update);
+          }
+        } else {
+          next.set(update.messageId, [update]);
+        }
       }
       return next;
     });
@@ -58,17 +68,20 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
   }, [socket, flushBatch]);
 
   const seedReceipts = useCallback(
-    (messageReceipts: Map<string, MessageReceiptDto>) => {
+    (messageReceipts: Map<string, MessageReceiptDto[]>) => {
       setReceipts((prev) => {
         const next = new Map(prev);
-        for (const [messageId, receipt] of messageReceipts) {
+        for (const [messageId, receiptsList] of messageReceipts) {
           if (!next.has(messageId)) {
-            next.set(messageId, {
+            next.set(
               messageId,
-              userId: receipt.userId,
-              status: receipt.status as "delivered" | "read",
-              readAt: receipt.readAt ?? undefined,
-            });
+              receiptsList.map((r) => ({
+                messageId,
+                userId: r.userId,
+                status: r.status as "delivered" | "read",
+                readAt: r.readAt ?? undefined,
+              })),
+            );
           }
         }
         return next;
@@ -77,12 +90,12 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const getReceipt = useCallback(
-    (messageId: string) => receipts.get(messageId),
+  const getReceipts = useCallback(
+    (messageId: string) => receipts.get(messageId) ?? [],
     [receipts],
   );
 
-  const value = useMemo(() => ({ getReceipt, seedReceipts }), [getReceipt, seedReceipts]);
+  const value = useMemo(() => ({ getReceipts, seedReceipts }), [getReceipts, seedReceipts]);
 
   return (
     <ReceiptContext.Provider value={value}>{children}</ReceiptContext.Provider>

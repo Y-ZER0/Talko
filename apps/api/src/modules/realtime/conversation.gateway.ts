@@ -51,11 +51,6 @@ export class ConversationGateway {
         new Date(),
       );
 
-      socket.emit(SocketEvent.CONVERSATION_OPENED, {
-        conversationId: payload.conversationId,
-        readBy: userId,
-      });
-
       const members = await this.memberRepo.findByConversation(payload.conversationId);
       for (const member of members) {
         if (member.userId !== userId) {

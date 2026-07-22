@@ -51,8 +51,11 @@ function DoubleCheck() {
 }
 
 export function ReadReceiptIcon({ messageId }: ReadReceiptIconProps) {
-  const { getReceipt } = useReceipts();
-  const receipt = getReceipt(messageId);
+  const { getReceipts } = useReceipts();
+  const receipts = getReceipts(messageId);
+  const receipt = receipts.length > 0
+    ? receipts.find((r) => r.status === "read") ?? receipts[0]
+    : undefined;
 
   if (!receipt) {
     return (

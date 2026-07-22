@@ -44,7 +44,7 @@ export function MessageActions({ isOwn, onEdit, onDelete, onReact, onReply }: Me
     <div className="relative">
       {/* Reaction bar on hover */}
       {showEmojiBar && (
-        <div ref={emojiBarRef} className="absolute bottom-full mb-1.5 left-0 flex items-center gap-0.5 bg-surface border border-border rounded-full px-1.5 py-1 shadow-lg z-10">
+        <div ref={emojiBarRef} className={`absolute bottom-full mb-1.5 flex items-center gap-0.5 bg-surface border border-border rounded-full px-1.5 py-1 shadow-lg z-10 ${isOwn ? "right-0" : "left-0"}`}>
           {QUICK_EMOJI.map((emoji) => (
             <button
               key={emoji}

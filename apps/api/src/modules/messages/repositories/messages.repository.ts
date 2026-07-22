@@ -179,17 +179,20 @@ export class MessagesRepository {
   async findReceiptsForMessages(
     messageIds: string[],
     viewerId: string,
-  ): Promise<Map<string, { userId: string; status: string; readAt: Date | null }>> {
+  ): Promise<Map<string, { userId: string; status: string; readAt: Date | null }[]>> {
     if (messageIds.length === 0) return new Map();
     const receipts = await this.receiptRepo.find({
       where: { messageId: In(messageIds) },
+      order: { readAt: "DESC" },
     });
-    const map = new Map<string, { userId: string; status: string; readAt: Date | null }>();
+    const map = new Map<string, { userId: string; status: string; readAt: Date | null }[]>();
     for (const r of receipts) {
       if (r.userId === viewerId) continue;
       const existing = map.get(r.messageId);
-      if (!existing || r.status === "read") {
-        map.set(r.messageId, { userId: r.userId, status: r.status, readAt: r.readAt });
+      if (existing) {
+        existing.push({ userId: r.userId, status: r.status, readAt: r.readAt });
+      } else {
+        map.set(r.messageId, [{ userId: r.userId, status: r.status, readAt: r.readAt }]);
       }
     }
     return map;

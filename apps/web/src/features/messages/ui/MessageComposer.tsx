@@ -124,6 +124,9 @@ export function MessageComposer({
       {
         content: trimmed || undefined,
         parentId: replyTarget?.messageId,
+        parentMessage: replyTarget
+          ? { id: replyTarget.messageId, senderId: "", senderName: replyTarget.senderName, content: replyTarget.content }
+          : undefined,
         attachments: readyAttachments.map((u) => ({
           mediaUrl: u.url!,
           mediaType: u.file.type.startsWith("image/")

@@ -21,8 +21,6 @@ interface MessageListProps {
   editingMessageId?: string;
   scrollToMessageId?: string;
   onStartEdit?: (messageId: string) => void;
-  onSaveEdit?: (messageId: string, content: string) => void;
-  onCancelEdit?: () => void;
   onAddReaction?: (messageId: string, emoji: string) => void;
   onRemoveReaction?: (messageId: string, emoji: string) => void;
   onDelete?: (messageId: string) => void;
@@ -35,10 +33,10 @@ function ReceiptSeeder({ messages }: { messages: MessageDto[] }) {
 
   useEffect(() => {
     if (messages.length === 0) return;
-    const receiptMap = new Map<string, { userId: string; status: string; readAt: string | null }>();
+    const receiptMap = new Map<string, { userId: string; status: string; readAt: string | null }[]>();
     for (const msg of messages) {
       if (msg.receipts.length > 0) {
-        receiptMap.set(msg.id, msg.receipts[0]);
+        receiptMap.set(msg.id, msg.receipts);
       }
     }
     if (receiptMap.size > 0) seedReceipts(receiptMap);
@@ -53,8 +51,6 @@ export function MessageList({
   editingMessageId,
   scrollToMessageId,
   onStartEdit,
-  onSaveEdit,
-  onCancelEdit,
   onAddReaction,
   onRemoveReaction,
   onDelete,
@@ -143,7 +139,7 @@ export function MessageList({
   return (
     <ReceiptProvider>
       <ReceiptSeeder messages={sortedMessages} />
-      <div ref={containerRef} className="flex-1 overflow-y-auto px-5 py-4">
+      <div ref={containerRef} className="flex-1 overflow-y-auto overflow-x-hidden px-5 py-4">
         <div className="flex flex-col gap-1">
           {hasNextPage && (
             <div ref={sentinelRef} className="py-4 text-center">
@@ -188,8 +184,7 @@ export function MessageList({
                   onReply={onReply}
                   editingMessageId={editingMessageId}
                   onStartEdit={onStartEdit}
-                  onSaveEdit={onSaveEdit}
-                  onCancelEdit={onCancelEdit}
+                  members={members}
                 />
               </div>
             );
