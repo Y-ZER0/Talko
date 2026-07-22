@@ -194,4 +194,27 @@ export class MessagesRepository {
     }
     return map;
   }
+
+  async findParentMessages(
+    parentIds: string[],
+  ): Promise<Map<string, { id: string; senderId: string; senderName: string; content: string | null }>> {
+    if (parentIds.length === 0) return new Map();
+    const results = await this.repo
+      .createQueryBuilder("m")
+      .select(["m.id", "m.sender_id", "m.content"])
+      .addSelect("u.username", "senderName")
+      .innerJoin("users", "u", "u.id = m.sender_id")
+      .where("m.id IN (:...parentIds)", { parentIds })
+      .getRawMany();
+    const map = new Map();
+    for (const r of results) {
+      map.set(r.id, {
+        id: r.id,
+        senderId: r.sender_id,
+        senderName: r.senderName,
+        content: r.content ?? null,
+      });
+    }
+    return map;
+  }
 }

@@ -7,11 +7,19 @@ export interface MessageReceiptDto {
   readAt: string | null;
 }
 
+export interface ParentMessageDto {
+  id: string;
+  senderId: string;
+  senderName: string;
+  content: string | null;
+}
+
 export interface MessageDto {
   id: string;
   conversationId: string;
   senderId: string;
   parentId: string | null;
+  parentMessage: ParentMessageDto | null;
   content: string | null;
   attachments: MessageAttachmentDto[];
   reactions: ReactionDto[];

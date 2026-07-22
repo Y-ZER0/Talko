@@ -48,11 +48,13 @@ export function useConversations() {
     socket.on(SocketEvent.CONVERSATION_LEAVE, handleLeaveConversation);
     socket.on(SocketEvent.CONVERSATION_DELETED, handleDeletedConversation);
     socket.on(SocketEvent.MESSAGE_NEW, handleMessageNew);
+    socket.on(SocketEvent.CONVERSATION_OPENED, handleNewConversation);
     return () => {
       socket.off(SocketEvent.CONVERSATION_NEW, handleNewConversation);
       socket.off(SocketEvent.CONVERSATION_LEAVE, handleLeaveConversation);
       socket.off(SocketEvent.CONVERSATION_DELETED, handleDeletedConversation);
       socket.off(SocketEvent.MESSAGE_NEW, handleMessageNew);
+      socket.off(SocketEvent.CONVERSATION_OPENED, handleNewConversation);
     };
   }, [socket, queryClient]);
 

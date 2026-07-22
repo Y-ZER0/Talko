@@ -75,6 +75,7 @@ export class ConversationsRepository {
         m.sender_id AS "senderId"
        FROM messages m
        WHERE m.conversation_id = ANY($1::uuid[])
+         AND m.is_deleted = false
        ORDER BY m.conversation_id ASC, m.created_at DESC`,
       [conversationIds],
     );
@@ -90,7 +91,8 @@ export class ConversationsRepository {
         `SELECT COUNT(*)::int AS cnt
          FROM messages
          WHERE conversation_id = $1
-           AND sender_id != $2`,
+           AND sender_id != $2
+           AND is_deleted = false`,
         [conversationId, userId],
       );
       return result[0]?.cnt ?? 0;
@@ -101,7 +103,8 @@ export class ConversationsRepository {
        FROM messages
        WHERE conversation_id = $1
          AND created_at > $2
-         AND sender_id != $3`,
+         AND sender_id != $3
+         AND is_deleted = false`,
       [conversationId, lastReadAt, userId],
     );
     return result[0]?.cnt ?? 0;

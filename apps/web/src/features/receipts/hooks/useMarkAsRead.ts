@@ -1,11 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSocket } from "@/features/presence/hooks/useSocket";
+import { conversationKeys } from "@/features/conversations/hooks/conversationKeys";
 import { SocketEvent } from "@repo/shared";
 
 export function useMarkAsRead(conversationId: string) {
   const { socket } = useSocket();
+  const queryClient = useQueryClient();
   const pendingRef = useRef<Set<string>>(new Set());
 
   const flush = useMemo(
@@ -21,6 +24,7 @@ export function useMarkAsRead(conversationId: string) {
               conversationId,
               messageIds: [...pendingRef.current],
             });
+            queryClient.invalidateQueries({ queryKey: conversationKeys.list() });
             pendingRef.current.clear();
             timeoutId = null;
           }, 500);

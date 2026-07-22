@@ -21,6 +21,7 @@ interface MessageBubbleProps {
   onAddReaction?: (messageId: string, emoji: string) => void;
   onRemoveReaction?: (messageId: string, emoji: string) => void;
   onDelete?: (messageId: string) => void;
+  onReply?: (message: MessageDto) => void;
   editingMessageId?: string;
   onStartEdit?: (messageId: string) => void;
   onSaveEdit?: (messageId: string, content: string) => void;
@@ -38,6 +39,7 @@ export function MessageBubble({
   onAddReaction,
   onRemoveReaction,
   onDelete,
+  onReply,
   editingMessageId,
   onStartEdit,
   onSaveEdit,
@@ -109,6 +111,23 @@ export function MessageBubble({
         )}
 
         <div className="relative">
+          {message.parentMessage && (
+            <div className={`flex items-center gap-2 px-3 py-1.5 mb-0.5 rounded-t-2xl border-b ${
+              isOwn
+                ? "bg-primary-500/20 border-primary-500/30"
+                : "bg-surface-muted border-border"
+            }`}>
+              <div className="w-0.5 self-stretch rounded-full bg-primary-500 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className={`text-[10px] font-semibold ${isOwn ? "text-text-inverse/80" : "text-primary-500"}`}>
+                  {message.parentMessage.senderName}
+                </p>
+                <p className={`text-[11px] truncate ${isOwn ? "text-text-inverse/60" : "text-text-muted"}`}>
+                  {message.parentMessage.content ?? "Attachment"}
+                </p>
+              </div>
+            </div>
+          )}
           <div
             className={
               hasAttachments && !message.content
@@ -152,6 +171,7 @@ export function MessageBubble({
             onEdit={() => onStartEdit?.(message.id)}
             onDelete={() => onDelete?.(message.id)}
             onReact={handleToggleReaction}
+            onReply={() => onReply?.(message)}
           />
         )}
       </div>

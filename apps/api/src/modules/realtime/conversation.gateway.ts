@@ -1,11 +1,12 @@
 import { Logger } from "@nestjs/common";
 import {
   WebSocketGateway,
+  WebSocketServer,
   SubscribeMessage,
   ConnectedSocket,
   MessageBody,
 } from "@nestjs/websockets";
-import { Socket } from "socket.io";
+import { Server, Socket } from "socket.io";
 import { SocketEvent } from "@repo/shared";
 import { ConversationMembersRepository } from "../conversations/repositories/conversation-members.repository";
 
@@ -15,6 +16,7 @@ import { ConversationMembersRepository } from "../conversations/repositories/con
 })
 export class ConversationGateway {
   private readonly logger = new Logger(ConversationGateway.name);
+  @WebSocketServer() server!: Server;
 
   constructor(
     private readonly memberRepo: ConversationMembersRepository,
@@ -42,11 +44,29 @@ export class ConversationGateway {
     @MessageBody() payload: { conversationId: string },
   ) {
     try {
+      const userId = socket.data.userId;
       await this.memberRepo.updateLastReadAt(
         payload.conversationId,
-        socket.data.userId,
+        userId,
         new Date(),
       );
+
+      socket.emit(SocketEvent.CONVERSATION_OPENED, {
+        conversationId: payload.conversationId,
+        readBy: userId,
+      });
+
+      const members = await this.memberRepo.findByConversation(payload.conversationId);
+      for (const member of members) {
+        if (member.userId !== userId) {
+          this.server
+            .to(`user:${member.userId}`)
+            .emit(SocketEvent.CONVERSATION_OPENED, {
+              conversationId: payload.conversationId,
+              readBy: userId,
+            });
+        }
+      }
     } catch (err) {
       this.logger.error(`handleConversationOpen failed`, err);
     }

@@ -20,6 +20,7 @@ export enum SocketEvent {
   // Conversation
   CONVERSATION_JOIN = "conversation:join",
   CONVERSATION_OPEN = "conversation:open",
+  CONVERSATION_OPENED = "conversation:opened",
   CONVERSATION_LEAVE = "conversation:leave",
   CONVERSATION_NEW = "conversation:new",
   CONVERSATION_DELETED = "conversation:deleted",

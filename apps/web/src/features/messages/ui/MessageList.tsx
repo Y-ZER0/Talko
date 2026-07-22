@@ -26,6 +26,8 @@ interface MessageListProps {
   onAddReaction?: (messageId: string, emoji: string) => void;
   onRemoveReaction?: (messageId: string, emoji: string) => void;
   onDelete?: (messageId: string) => void;
+  onReply?: (message: MessageDto) => void;
+  members?: { user: { id: string; username: string } }[];
 }
 
 function ReceiptSeeder({ messages }: { messages: MessageDto[] }) {
@@ -56,6 +58,8 @@ export function MessageList({
   onAddReaction,
   onRemoveReaction,
   onDelete,
+  onReply,
+  members,
 }: MessageListProps) {
   const { userId } = useAuth();
   const effectiveUserId = currentUserId ?? userId;
@@ -154,6 +158,8 @@ export function MessageList({
             const isOwn = message.senderId === effectiveUserId;
             const showDate = shouldShowDateSeparator(message, previousMessage);
             const showName = shouldShowSenderName(message, previousMessage, isOwn);
+            const member = members?.find((m) => m.user.id === message.senderId);
+            const senderName = member?.user.username ?? "User";
 
             return (
               <div
@@ -171,6 +177,7 @@ export function MessageList({
                 <MessageBubble
                   message={message}
                   isOwn={isOwn}
+                  senderName={senderName}
                   showAvatar={showName}
                   showTimestamp={showName}
                   observeRef={observe}
@@ -178,6 +185,7 @@ export function MessageList({
                   onAddReaction={onAddReaction}
                   onRemoveReaction={onRemoveReaction}
                   onDelete={onDelete}
+                  onReply={onReply}
                   editingMessageId={editingMessageId}
                   onStartEdit={onStartEdit}
                   onSaveEdit={onSaveEdit}

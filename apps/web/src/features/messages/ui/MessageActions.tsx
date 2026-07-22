@@ -9,9 +9,10 @@ interface MessageActionsProps {
   onEdit: () => void;
   onDelete: () => void;
   onReact: (emoji: string) => void;
+  onReply: () => void;
 }
 
-export function MessageActions({ isOwn, onEdit, onDelete, onReact }: MessageActionsProps) {
+export function MessageActions({ isOwn, onEdit, onDelete, onReact, onReply }: MessageActionsProps) {
   const [showEmojiBar, setShowEmojiBar] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -80,6 +81,20 @@ export function MessageActions({ isOwn, onEdit, onDelete, onReact }: MessageActi
             type="button"
             onClick={() => {
               setShowMenu(false);
+              onReply();
+            }}
+            className="w-full px-3.5 py-2 text-left text-sm text-text hover:bg-surface-muted transition-colors flex items-center gap-2.5"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 17 4 12 9 7" />
+              <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
+            </svg>
+            Reply
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowMenu(false);
               onReact("👍");
             }}
             className="w-full px-3.5 py-2 text-left text-sm text-text hover:bg-surface-muted transition-colors flex items-center gap-2.5"
@@ -124,6 +139,17 @@ export function MessageActions({ isOwn, onEdit, onDelete, onReact }: MessageActi
       {/* Hover trigger buttons — inline flex items, no overflow */}
       {!showEmojiBar && !showMenu && (
         <div className="flex items-center gap-0.5">
+          <button
+            type="button"
+            onClick={onReply}
+            className="w-7 h-7 rounded-full flex items-center justify-center text-text-muted bg-surface shadow-sm border border-border md:bg-transparent md:shadow-none md:border-transparent hover:bg-surface-muted transition-colors"
+            aria-label="Reply"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 17 4 12 9 7" />
+              <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
+            </svg>
+          </button>
           <button
             type="button"
             onClick={() => setShowEmojiBar(true)}

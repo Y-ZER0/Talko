@@ -12,6 +12,7 @@ import { SocketEvent } from "@repo/shared";
 import type { TypingEventPayload } from "@repo/shared";
 import { PresenceService } from "./services/presence.service";
 import { TypingService } from "./services/typing.service";
+import { ConversationMembersRepository } from "../conversations/repositories/conversation-members.repository";
 
 @WebSocketGateway({
   namespace: "/",
@@ -24,6 +25,7 @@ export class PresenceGateway implements OnGatewayDisconnect {
   constructor(
     private readonly presenceService: PresenceService,
     private readonly typingService: TypingService,
+    private readonly memberRepo: ConversationMembersRepository,
   ) {}
 
   async handleDisconnect(socket: Socket) {
@@ -35,6 +37,7 @@ export class PresenceGateway implements OnGatewayDisconnect {
       for (const conversationId of typingConversations) {
         const broadcastPayload: TypingEventPayload = { conversationId, userId };
         this.server.to(conversationId).emit(SocketEvent.TYPING_STOP, broadcastPayload);
+        await this.notifyMemberUserRooms(conversationId, userId, SocketEvent.TYPING_STOP);
       }
     }
   }
@@ -58,6 +61,7 @@ export class PresenceGateway implements OnGatewayDisconnect {
     );
 
     socket.to(payload.conversationId).emit(SocketEvent.TYPING_START, broadcastPayload);
+    await this.notifyMemberUserRooms(payload.conversationId, userId, SocketEvent.TYPING_START);
   }
 
   @SubscribeMessage(SocketEvent.TYPING_STOP)
@@ -79,6 +83,7 @@ export class PresenceGateway implements OnGatewayDisconnect {
     );
 
     socket.to(payload.conversationId).emit(SocketEvent.TYPING_STOP, broadcastPayload);
+    await this.notifyMemberUserRooms(payload.conversationId, userId, SocketEvent.TYPING_STOP);
   }
 
   @SubscribeMessage(SocketEvent.PING)
@@ -88,5 +93,25 @@ export class PresenceGateway implements OnGatewayDisconnect {
 
     await this.presenceService.handleHeartbeat(userId);
     socket.emit(SocketEvent.PONG);
+  }
+
+  private async notifyMemberUserRooms(
+    conversationId: string,
+    senderId: string,
+    event: SocketEvent,
+  ): Promise<void> {
+    try {
+      const members = await this.memberRepo.findByConversation(conversationId);
+      for (const member of members) {
+        if (member.userId !== senderId) {
+          this.server.to(`user:${member.userId}`).emit(event, {
+            conversationId,
+            userId: senderId,
+          });
+        }
+      }
+    } catch (err) {
+      this.logger.error("notifyMemberUserRooms failed", err);
+    }
   }
 }

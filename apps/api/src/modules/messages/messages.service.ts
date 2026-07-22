@@ -15,6 +15,7 @@ import type {
   ReceiptUpdateEventPayload,
   MessageAttachmentDto,
   ReactionDto,
+  ParentMessageDto,
 } from "@repo/shared";
 
 @Injectable()
@@ -52,7 +53,14 @@ export class MessagesService {
       senderId,
       dto.clientId,
     );
-    if (existing) return this.toDto(existing);
+    if (existing) {
+      let parentMsg: ParentMessageDto | undefined;
+      if (existing.parentId) {
+        const parents = await this.messagesRepository.findParentMessages([existing.parentId]);
+        parentMsg = parents.get(existing.parentId);
+      }
+      return this.toDto(existing, undefined, parentMsg);
+    }
 
     const message = await this.messagesRepository.saveWithAttachments({
       conversationId,
@@ -67,7 +75,12 @@ export class MessagesService {
       })),
     });
 
-    return this.toDto(message);
+    let parentMsg: ParentMessageDto | undefined;
+    if (dto.parentId) {
+      const parents = await this.messagesRepository.findParentMessages([dto.parentId]);
+      parentMsg = parents.get(dto.parentId);
+    }
+    return this.toDto(message, undefined, parentMsg);
   }
 
   async getMessages(
@@ -102,7 +115,13 @@ export class MessagesService {
       userId,
     );
 
-    const data = messages.map((m) => this.toDto(m, receipts.get(m.id)));
+    const parentIds = messages
+      .map((m) => m.parentId)
+      .filter((id): id is string => id !== null && id !== undefined);
+    const uniqueParentIds = [...new Set(parentIds)];
+    const parentMessages = await this.messagesRepository.findParentMessages(uniqueParentIds);
+
+    const data = messages.map((m) => this.toDto(m, receipts.get(m.id), parentMessages.get(m.parentId ?? "")));
     const nextCursor =
       data.length > 0 ? data[data.length - 1].createdAt : null;
 
@@ -179,7 +198,12 @@ export class MessagesService {
     });
 
     const saved = await this.messagesRepository.findById(messageId);
-    return this.toDto(saved!);
+    let parentMsg: ParentMessageDto | undefined;
+    if (saved!.parentId) {
+      const parents = await this.messagesRepository.findParentMessages([saved!.parentId]);
+      parentMsg = parents.get(saved!.parentId);
+    }
+    return this.toDto(saved!, undefined, parentMsg);
   }
 
   async delete(
@@ -198,7 +222,12 @@ export class MessagesService {
     });
 
     const saved = await this.messagesRepository.findById(messageId);
-    return this.toDto(saved!);
+    let parentMsg: ParentMessageDto | undefined;
+    if (saved!.parentId) {
+      const parents = await this.messagesRepository.findParentMessages([saved!.parentId]);
+      parentMsg = parents.get(saved!.parentId);
+    }
+    return this.toDto(saved!, undefined, parentMsg);
   }
 
   async addReaction(
@@ -252,12 +281,14 @@ export class MessagesService {
   toDto(
     message: Message,
     receipt?: { userId: string; status: string; readAt: Date | null },
+    parentMessage?: ParentMessageDto,
   ): MessageDto {
     return {
       id: message.id,
       conversationId: message.conversationId,
       senderId: message.senderId,
       parentId: message.parentId ?? null,
+      parentMessage: parentMessage ?? null,
       content: message.content ?? null,
       attachments: (message.attachments ?? []).map((a) => this.attachmentToDto(a)),
       reactions: (message.reactions ?? []).map((r) => this.reactionToDto(r)),

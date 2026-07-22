@@ -1,7 +1,6 @@
 import { Module, forwardRef } from "@nestjs/common";
 import { MessagesModule } from "../messages/messages.module";
 import { UsersModule } from "../users/users.module";
-import { NotificationsModule } from "../notifications/notifications.module";
 import { ConversationsModule } from "../conversations/conversations.module";
 import { PresenceModule } from "../presence/presence.module";
 import { ConnectionGateway } from "./connection.gateway";
@@ -15,7 +14,6 @@ import { ReactionGateway } from "./reaction.gateway";
   imports: [
     MessagesModule,
     UsersModule,
-    NotificationsModule,
     forwardRef(() => ConversationsModule),
     PresenceModule,
   ],

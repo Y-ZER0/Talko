@@ -48,7 +48,7 @@ export function MessageTimeline({ conversationId }: MessageTimelineProps) {
   const editMessage = useEditMessage(conversationId);
   const deleteMessage = useDeleteMessage(conversationId);
   const { addReaction, removeReaction } = useReaction(conversationId, currentUserId);
-  const { replyTarget, cancelReply } = useReplyTo();
+  const { replyTarget, startReply, cancelReply } = useReplyTo();
 
   const displayName = conversation
     ? getDisplayName(conversation, currentUserId)
@@ -161,6 +161,15 @@ export function MessageTimeline({ conversationId }: MessageTimelineProps) {
     [conversationId, router],
   );
 
+  const handleReply = useCallback(
+    (message: import("@repo/shared").MessageDto) => {
+      const sender = conversation?.members.find((m) => m.user.id === message.senderId);
+      const senderName = sender?.user.username ?? "User";
+      startReply(message, senderName);
+    },
+    [conversation?.members, startReply],
+  );
+
   return (
     <div className="flex h-full">
       <div className="flex flex-col flex-1 min-w-0">
@@ -186,6 +195,8 @@ export function MessageTimeline({ conversationId }: MessageTimelineProps) {
           onAddReaction={handleAddReaction}
           onRemoveReaction={handleRemoveReaction}
           onDelete={handleRequestDelete}
+          onReply={handleReply}
+          members={conversation?.members}
         />
 
         <MessageComposer
