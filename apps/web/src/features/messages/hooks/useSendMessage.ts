@@ -145,9 +145,13 @@ export function useSendMessage(conversationId: string, currentUserId?: string) {
             ...old,
             pages: old.pages.map((page) => ({
               ...page,
-              data: page.data.map((msg) =>
-                msg.clientId === variables.clientId ? data : msg,
-              ),
+              data: page.data.map((msg) => {
+                if (msg.clientId !== variables.clientId) return msg;
+                return {
+                  ...data,
+                  parentMessage: data.parentMessage ?? msg.parentMessage ?? null,
+                };
+              }),
             })),
           };
         },

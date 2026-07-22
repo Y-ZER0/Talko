@@ -83,20 +83,22 @@ export function MessageTimeline({ conversationId }: MessageTimelineProps) {
 
   useEffect(() => {
     joinRoom(conversationId);
-    if (socket?.connected) {
-      socket.emit(SocketEvent.CONVERSATION_OPEN, { conversationId });
-      const timer = setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: conversationKeys.list() });
-      }, 200);
-      return () => {
-        clearTimeout(timer);
-        leaveRoom(conversationId);
-      };
-    }
+
+    const emitOpen = () => {
+      if (socket?.connected) {
+        socket.emit(SocketEvent.CONVERSATION_OPEN, { conversationId });
+      }
+    };
+
+    emitOpen();
+
+    socket?.on("connect", emitOpen);
+
     return () => {
+      socket?.off("connect", emitOpen);
       leaveRoom(conversationId);
     };
-  }, [conversationId, joinRoom, leaveRoom, socket, queryClient]);
+  }, [conversationId, joinRoom, leaveRoom, socket]);
 
   useEffect(() => {
     if (otherUserId) {

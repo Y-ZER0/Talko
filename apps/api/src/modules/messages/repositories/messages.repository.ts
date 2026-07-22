@@ -204,16 +204,18 @@ export class MessagesRepository {
     if (parentIds.length === 0) return new Map();
     const results = await this.repo
       .createQueryBuilder("m")
-      .select(["m.id", "m.sender_id", "m.content"])
+      .select("m.id", "id")
+      .addSelect("m.senderId", "senderId")
+      .addSelect("m.content", "content")
       .addSelect("u.username", "senderName")
-      .innerJoin("users", "u", "u.id = m.sender_id")
-      .where("m.id IN (:...parentIds)", { parentIds })
+      .innerJoin("users", "u", "u.id = m.senderId")
+      .where("m.id IN (:...parentIds)", { parentIds: [...new Set(parentIds)] })
       .getRawMany();
     const map = new Map();
     for (const r of results) {
       map.set(r.id, {
         id: r.id,
-        senderId: r.sender_id,
+        senderId: r.senderId,
         senderName: r.senderName,
         content: r.content ?? null,
       });

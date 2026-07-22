@@ -9,8 +9,10 @@ export default function ProfilePage() {
   const { user: clerkUser, isLoaded: clerkLoaded } = useCurrentUser();
   const { data: profile, isLoading: profileLoading } = useCurrentUserProfile();
 
-  const displayName = profile?.username || clerkUser?.fullName || clerkUser?.username || "User";
-  const username = profile?.username || clerkUser?.username || "";
+  const clerkUsername = clerkUser?.username;
+  const profileUsername = profile?.username;
+  const username = clerkUsername || profileUsername || "";
+  const displayName = clerkUsername || profile?.username || clerkUser?.fullName || "User";
   const avatarUrl = profile?.avatarUrl || clerkUser?.imageUrl || null;
   const userId = profile?.id || clerkUser?.id || "";
 

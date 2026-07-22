@@ -47,7 +47,9 @@ export function useRealtimeMessages(
 
     const handleMessageAck = (payload: { clientId: string; message: MessageDto }) => {
       updateCache((msg) =>
-        msg.clientId === payload.clientId ? payload.message : msg,
+        msg.clientId === payload.clientId
+          ? { ...payload.message, parentMessage: payload.message.parentMessage ?? msg.parentMessage ?? null }
+          : msg,
       );
     };
 
