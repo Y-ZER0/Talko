@@ -12,6 +12,7 @@ import {
 } from "../lib/message-helpers";
 import type { MessageDto } from "@repo/shared";
 import { ReceiptProvider } from "@/features/receipts/context/ReceiptContext";
+import { useReceipts } from "@/features/receipts/hooks/useReceipts";
 import { useMarkAsRead } from "@/features/receipts/hooks/useMarkAsRead";
 
 interface MessageListProps {
@@ -25,6 +26,23 @@ interface MessageListProps {
   onAddReaction?: (messageId: string, emoji: string) => void;
   onRemoveReaction?: (messageId: string, emoji: string) => void;
   onDelete?: (messageId: string) => void;
+}
+
+function ReceiptSeeder({ messages }: { messages: MessageDto[] }) {
+  const { seedReceipts } = useReceipts();
+
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const receiptMap = new Map<string, { userId: string; status: string; readAt: string | null }>();
+    for (const msg of messages) {
+      if (msg.receipts.length > 0) {
+        receiptMap.set(msg.id, msg.receipts[0]);
+      }
+    }
+    if (receiptMap.size > 0) seedReceipts(receiptMap);
+  }, [messages, seedReceipts]);
+
+  return null;
 }
 
 export function MessageList({
@@ -120,6 +138,7 @@ export function MessageList({
 
   return (
     <ReceiptProvider>
+      <ReceiptSeeder messages={sortedMessages} />
       <div ref={containerRef} className="flex-1 overflow-y-auto px-5 py-4">
         <div className="flex flex-col gap-1">
           {hasNextPage && (

@@ -31,6 +31,9 @@ export function useReaction(conversationId: string, currentUserId?: string) {
             data: page.data.map((msg) => {
               if (msg.id !== messageId) return msg;
               if (add) {
+                const filtered = msg.reactions.filter(
+                  (r) => r.userId !== effectiveUserId,
+                );
                 const newReaction: ReactionDto = {
                   id: `temp-${Date.now()}`,
                   messageId,
@@ -38,7 +41,7 @@ export function useReaction(conversationId: string, currentUserId?: string) {
                   emoji,
                   createdAt: new Date().toISOString(),
                 };
-                return { ...msg, reactions: [...msg.reactions, newReaction] };
+                return { ...msg, reactions: [...filtered, newReaction] };
               }
               return {
                 ...msg,

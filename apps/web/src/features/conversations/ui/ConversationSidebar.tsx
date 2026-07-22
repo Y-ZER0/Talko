@@ -60,10 +60,6 @@ export function ConversationSidebar() {
             <h1 className="text-sm font-semibold text-text leading-tight tracking-tight">
               Talko
             </h1>
-            <p className="flex items-center gap-1 text-[10px] font-mono text-online tracking-label uppercase mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-online animate-pulse" />
-              Connected
-            </p>
           </div>
         </div>
         <button

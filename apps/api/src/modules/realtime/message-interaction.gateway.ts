@@ -40,6 +40,7 @@ export class MessageInteractionGateway {
       const userId = socket.data.userId;
       const edited = await this.messagesService.edit(userId, payload.messageId, payload.content);
 
+      socket.emit(SocketEvent.MESSAGE_EDIT, edited);
       socket.broadcast
         .to(edited.conversationId)
         .emit(SocketEvent.MESSAGE_EDIT, edited);
@@ -67,6 +68,7 @@ export class MessageInteractionGateway {
       const userId = socket.data.userId;
       const deleted = await this.messagesService.delete(userId, payload.messageId);
 
+      socket.emit(SocketEvent.MESSAGE_DELETE, deleted);
       socket.broadcast
         .to(deleted.conversationId)
         .emit(SocketEvent.MESSAGE_DELETE, deleted);

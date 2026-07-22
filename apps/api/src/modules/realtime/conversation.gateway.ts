@@ -28,6 +28,14 @@ export class ConversationGateway {
     socket.join(payload.conversationId);
   }
 
+  @SubscribeMessage(SocketEvent.CONVERSATION_LEAVE)
+  handleConversationLeave(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() payload: { conversationId: string },
+  ) {
+    socket.leave(payload.conversationId);
+  }
+
   @SubscribeMessage(SocketEvent.CONVERSATION_OPEN)
   async handleConversationOpen(
     @ConnectedSocket() socket: Socket,

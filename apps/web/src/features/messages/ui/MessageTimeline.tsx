@@ -3,11 +3,13 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSocket } from "@/features/presence/hooks/useSocket";
 import { usePresence } from "@/features/presence/hooks/usePresence";
 import { formatLastSeen } from "@/features/presence/lib/presence-helpers";
 import { useCurrentUserProfile } from "@/features/auth/hooks/useCurrentUserProfile";
 import { useConversation } from "@/features/conversations/hooks/useConversation";
+import { conversationKeys } from "@/features/conversations/hooks/conversationKeys";
 import { getDisplayName } from "@/features/conversations/lib/conversation-helpers";
 import { SharedMediaPanel } from "@/features/media/ui/SharedMediaPanel";
 import { SearchPanel } from "@/features/search/ui/SearchPanel";
@@ -39,8 +41,9 @@ export function MessageTimeline({ conversationId }: MessageTimelineProps) {
   const { data: profile } = useCurrentUserProfile();
   const currentUserId = profile?.id ?? clerkId ?? undefined;
   const { socket, joinRoom, leaveRoom } = useSocket();
-  const { isOnline, getLastSeen } = usePresence();
+  const { isOnline, getLastSeen, fetchPresence } = usePresence();
   const { data: conversation, isLoading } = useConversation(conversationId);
+  const queryClient = useQueryClient();
 
   const editMessage = useEditMessage(conversationId);
   const deleteMessage = useDeleteMessage(conversationId);
@@ -65,11 +68,18 @@ export function MessageTimeline({ conversationId }: MessageTimelineProps) {
     joinRoom(conversationId);
     if (socket?.connected) {
       socket.emit(SocketEvent.CONVERSATION_OPEN, { conversationId });
+      queryClient.invalidateQueries({ queryKey: conversationKeys.list() });
     }
     return () => {
       leaveRoom(conversationId);
     };
-  }, [conversationId, joinRoom, leaveRoom, socket]);
+  }, [conversationId, joinRoom, leaveRoom, socket, queryClient]);
+
+  useEffect(() => {
+    if (otherUserId) {
+      fetchPresence(otherUserId);
+    }
+  }, [otherUserId, fetchPresence]);
 
   useEffect(() => {
     const msgId = searchParams.get("messageId");
@@ -116,10 +126,9 @@ export function MessageTimeline({ conversationId }: MessageTimelineProps) {
 
   const handleConfirmDelete = useCallback(() => {
     if (deletingMessageId) {
-      deleteMessage.mutate(
-        { messageId: deletingMessageId },
-        { onSuccess: () => setDeletingMessageId(null) },
-      );
+      const mid = deletingMessageId;
+      setDeletingMessageId(null);
+      deleteMessage.mutate({ messageId: mid });
     }
   }, [deletingMessageId, deleteMessage]);
 

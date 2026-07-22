@@ -9,7 +9,9 @@ import {
   useRef,
   useState,
 } from "react";
+import { useAuth } from "@clerk/nextjs";
 import { useSocket } from "../hooks/useSocket";
+import { presenceService } from "../services/presence.service";
 import { SocketEvent } from "@repo/shared";
 import type { PresenceEventPayload } from "@repo/shared";
 
@@ -17,6 +19,7 @@ interface PresenceContextValue {
   getPresence: (userId: string) => PresenceEventPayload | undefined;
   isOnline: (userId: string) => boolean;
   getLastSeen: (userId: string) => string | undefined;
+  fetchPresence: (userId: string) => Promise<void>;
 }
 
 export const PresenceContext = createContext<PresenceContextValue | null>(null);
@@ -24,6 +27,7 @@ export const PresenceContext = createContext<PresenceContextValue | null>(null);
 const PING_INTERVAL_MS = 30_000;
 
 export function PresenceProvider({ children }: { children: ReactNode }) {
+  const { getToken } = useAuth();
   const { socket } = useSocket();
   const [presenceMap, setPresenceMap] = useState<
     Map<string, PresenceEventPayload>
@@ -69,6 +73,24 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
     };
   }, [socket?.connected]);
 
+  const fetchPresence = useCallback(
+    async (userId: string) => {
+      try {
+        const token = await getToken();
+        if (!token) return;
+        const presence = await presenceService.getPresence(userId, token);
+        setPresenceMap((prev) => {
+          const next = new Map(prev);
+          next.set(userId, presence);
+          return next;
+        });
+      } catch {
+        // ignore
+      }
+    },
+    [getToken],
+  );
+
   const getPresence = useCallback(
     (userId: string) => presenceMap.get(userId),
     [presenceMap],
@@ -85,8 +107,8 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ getPresence, isOnline, getLastSeen }),
-    [getPresence, isOnline, getLastSeen],
+    () => ({ getPresence, isOnline, getLastSeen, fetchPresence }),
+    [getPresence, isOnline, getLastSeen, fetchPresence],
   );
 
   return (

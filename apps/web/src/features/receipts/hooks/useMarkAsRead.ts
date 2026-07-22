@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useSocket } from "@/features/presence/hooks/useSocket";
 import { SocketEvent } from "@repo/shared";
 
@@ -16,6 +16,7 @@ export function useMarkAsRead(conversationId: string) {
           if (timeoutId) clearTimeout(timeoutId);
           timeoutId = setTimeout(() => {
             if (!pendingRef.current.size || !socket) return;
+            if (document.hidden) return;
             socket.emit(SocketEvent.RECEIPT_READ, {
               conversationId,
               messageIds: [...pendingRef.current],
@@ -28,13 +29,25 @@ export function useMarkAsRead(conversationId: string) {
     [socket, conversationId],
   );
 
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        flush();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [flush]);
+
   const observe = useCallback(
     (el: HTMLElement, messageId: string) => {
       const observer = new IntersectionObserver(
         ([entry]) => {
           if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
-            pendingRef.current.add(messageId);
-            flush();
+            if (!messageId.startsWith("temp-") && !document.hidden) {
+              pendingRef.current.add(messageId);
+              flush();
+            }
             observer.disconnect();
           }
         },

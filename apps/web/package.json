@@ -3,7 +3,9 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
+    "prebuild": "node scripts/inject-firebase-config.js",
     "build": "next build",
+    "predev": "node scripts/inject-firebase-config.js",
     "dev": "next dev",
     "lint": "echo 'web lint ok'",
     "typecheck": "tsc --noEmit"

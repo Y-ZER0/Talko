@@ -19,6 +19,6 @@ import { RealtimeModule } from "../realtime/realtime.module";
     ConversationMembersRepository,
   ],
   controllers: [ConversationsController],
-  exports: [ConversationsService, ConversationMembersRepository],
+  exports: [ConversationsService, ConversationsRepository, ConversationMembersRepository],
 })
 export class ConversationsModule {}

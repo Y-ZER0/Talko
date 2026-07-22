@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { isBraveBrowser } from "@/shared/lib/firebase";
 
+const TAG = "[NotificationPermissionPrompt]";
 const STORAGE_KEY = "notification-permission-dismissed";
 
 function getPermissionState(): NotificationPermission | null {
@@ -18,30 +20,51 @@ export function NotificationPermissionPrompt({ onPermissionGranted }: Notificati
   const [requesting, setRequesting] = useState(false);
 
   useEffect(() => {
+    if (isBraveBrowser()) {
+      console.log(TAG, "Brave browser detected, skipping notification prompt");
+      return;
+    }
+
     const permission = getPermissionState();
+    console.log(TAG, "Current permission state:", permission);
+    const dismissed = localStorage.getItem(STORAGE_KEY);
+    console.log(TAG, "Previously dismissed:", !!dismissed);
+
     if (permission !== "granted" && permission !== "denied") {
-      const dismissed = localStorage.getItem(STORAGE_KEY);
       if (!dismissed) {
+        console.log(TAG, "Showing permission prompt");
         setVisible(true);
+      } else {
+        console.log(TAG, "Prompt was previously dismissed, not showing");
       }
+    } else {
+      console.log(TAG, "Permission already resolved:", permission);
     }
   }, []);
 
   const handleAllow = useCallback(async () => {
+    console.log(TAG, "User clicked Allow");
     setRequesting(true);
     try {
       const result = await Notification.requestPermission();
+      console.log(TAG, "Permission request result:", result);
       setVisible(false);
       localStorage.setItem(STORAGE_KEY, "1");
       if (result === "granted") {
+        console.log(TAG, "Permission granted, calling onPermissionGranted");
         onPermissionGranted?.();
+      } else {
+        console.warn(TAG, "Permission not granted:", result);
       }
+    } catch (err) {
+      console.error(TAG, "Permission request failed:", err);
     } finally {
       setRequesting(false);
     }
   }, [onPermissionGranted]);
 
   const handleDismiss = useCallback(() => {
+    console.log(TAG, "User dismissed prompt");
     setVisible(false);
     localStorage.setItem(STORAGE_KEY, "1");
   }, []);

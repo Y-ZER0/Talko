@@ -26,12 +26,6 @@ export class Message {
   @Column({ nullable: true, type: "text" })
   content!: string | null;
 
-  @Column({ name: "media_url", nullable: true, type: "varchar" })
-  mediaUrl!: string | null;
-
-  @Column({ name: "media_type", nullable: true, type: "varchar" })
-  mediaType!: string | null;
-
   @Column({ name: "is_deleted", default: false })
   isDeleted!: boolean;
 
@@ -52,6 +46,6 @@ export class Message {
   })
   attachments!: MessageAttachment[];
 
-  @OneToMany(() => MessageReaction, (reaction) => reaction.messageId)
+  @OneToMany(() => MessageReaction, (reaction) => reaction.message)
   reactions!: MessageReaction[];
 }

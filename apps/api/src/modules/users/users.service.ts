@@ -31,28 +31,35 @@ export class UsersService {
 
     if (existing) {
       if (input.username !== existing.username) {
-        const duplicate = await this.usersRepository.findByUsername(input.username);
-        if (duplicate && duplicate.id !== existing.id) {
-          throw new ConflictException("Username is already taken");
-        }
+        const resolved = await this.resolveUsername(input.username, existing.id);
+        existing.username = resolved;
       }
-      existing.username = input.username;
       if (input.imageUrl !== undefined) {
         existing.avatarUrl = input.imageUrl || null;
       }
       return this.usersRepository.save(existing);
     }
 
-    const duplicate = await this.usersRepository.findByUsername(input.username);
-    if (duplicate) {
-      throw new ConflictException("Username is already taken");
-    }
+    const resolved = await this.resolveUsername(input.username);
 
     return this.usersRepository.save({
       clerkId: input.id,
-      username: input.username,
+      username: resolved,
       avatarUrl: input.imageUrl ?? null,
     });
+  }
+
+  private async resolveUsername(username: string, excludeId?: string): Promise<string> {
+    const duplicate = await this.usersRepository.findByUsername(username);
+    if (!duplicate || (excludeId && duplicate.id === excludeId)) {
+      return username;
+    }
+    let candidate = `${username}${Math.floor(1000 + Math.random() * 9000)}`;
+    while (true) {
+      const exists = await this.usersRepository.findByUsername(candidate);
+      if (!exists) return candidate;
+      candidate = `${username}${Math.floor(1000 + Math.random() * 9000)}`;
+    }
   }
 
   async removeByClerkId(clerkId: string): Promise<void> {

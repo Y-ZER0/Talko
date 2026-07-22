@@ -1,16 +1,20 @@
 "use client";
 
 import { useCurrentUserProfile } from "@/features/auth/hooks/useCurrentUserProfile";
+import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
 import { Avatar } from "@/shared/ui/components/Avatar";
 
 export function CurrentUserBar() {
   const { data: profile } = useCurrentUserProfile();
+  const { user: clerkUser } = useCurrentUser();
+  const avatarUrl = profile?.avatarUrl || clerkUser?.imageUrl || null;
 
   return (
     <div className="flex items-center gap-3 px-4 py-3.5 border-t border-border bg-surface">
       <Avatar
         name={profile?.username ?? "You"}
         userId={profile?.id ?? ""}
+        imageUrl={avatarUrl}
         size="sm"
         showPresenceDot
         isOnline

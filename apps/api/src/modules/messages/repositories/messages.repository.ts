@@ -84,7 +84,7 @@ export class MessagesRepository {
       .leftJoinAndSelect("m.attachments", "a")
       .leftJoinAndSelect("m.reactions", "r")
       .where("m.conversation_id = :conversationId", { conversationId })
-      .orderBy("m.created_at", "DESC")
+      .orderBy("m.createdAt", "DESC")
       .take(take);
 
     if (cursor) {
@@ -138,14 +138,23 @@ export class MessagesRepository {
     messageId: string,
     userId: string,
     emoji: string,
-  ): Promise<MessageReaction> {
+  ): Promise<{ reaction: MessageReaction; replacedEmoji: string | null }> {
     const existing = await this.reactionRepo.findOne({
-      where: { messageId, userId, emoji },
+      where: { messageId, userId },
     });
-    if (existing) return existing;
-    return this.reactionRepo.save(
+    if (existing) {
+      if (existing.emoji === emoji) {
+        return { reaction: existing, replacedEmoji: null };
+      }
+      const replacedEmoji = existing.emoji;
+      existing.emoji = emoji;
+      const saved = await this.reactionRepo.save(existing);
+      return { reaction: saved, replacedEmoji };
+    }
+    const created = await this.reactionRepo.save(
       this.reactionRepo.create({ messageId, userId, emoji }),
     );
+    return { reaction: created, replacedEmoji: null };
   }
 
   async deleteReaction(
@@ -156,7 +165,33 @@ export class MessagesRepository {
     await this.reactionRepo.delete({ messageId, userId, emoji });
   }
 
+  async findReactionByUserAndMessage(
+    messageId: string,
+    userId: string,
+  ): Promise<MessageReaction | null> {
+    return this.reactionRepo.findOne({ where: { messageId, userId } });
+  }
+
   async findReactionsByMessage(messageId: string): Promise<MessageReaction[]> {
     return this.reactionRepo.find({ where: { messageId } });
+  }
+
+  async findReceiptsForMessages(
+    messageIds: string[],
+    viewerId: string,
+  ): Promise<Map<string, { userId: string; status: string; readAt: Date | null }>> {
+    if (messageIds.length === 0) return new Map();
+    const receipts = await this.receiptRepo.find({
+      where: { messageId: In(messageIds) },
+    });
+    const map = new Map<string, { userId: string; status: string; readAt: Date | null }>();
+    for (const r of receipts) {
+      if (r.userId === viewerId) continue;
+      const existing = map.get(r.messageId);
+      if (!existing || r.status === "read") {
+        map.set(r.messageId, { userId: r.userId, status: r.status, readAt: r.readAt });
+      }
+    }
+    return map;
   }
 }

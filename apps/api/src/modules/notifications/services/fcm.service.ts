@@ -47,9 +47,12 @@ export class FcmService {
     payload: { title: string; body: string; data?: Record<string, string> },
   ): Promise<FcmSendResult> {
     const result: FcmSendResult = { successCount: 0, failureCount: 0, invalidTokens: [] };
-    if (tokens.length === 0) return result;
+    if (tokens.length === 0) {
+      this.logger.warn("sendPush: no tokens provided");
+      return result;
+    }
     if (!this.app) {
-      this.logger.warn("FCM not initialized — skipping push");
+      this.logger.error("sendPush: FCM Admin not initialized — skipping push. Check FCM_PROJECT_ID, FCM_CLIENT_EMAIL, FCM_PRIVATE_KEY env vars");
       return result;
     }
 
@@ -61,9 +64,12 @@ export class FcmService {
         data: payload.data,
       };
 
+      this.logger.log(`sendPush: sending to ${tokens.length} token(s), title="${payload.title}"`);
       const response = await messaging.sendEachForMulticast(message);
       result.successCount = response.successCount;
       result.failureCount = response.failureCount;
+
+      this.logger.log(`sendPush: response — success=${response.successCount}, failure=${response.failureCount}`);
 
       for (let i = 0; i < response.responses.length; i++) {
         const resp = response.responses[i];
@@ -71,6 +77,7 @@ export class FcmService {
           !resp.success &&
           resp.error
         ) {
+          this.logger.warn(`sendPush: token[${i}] failed — code=${resp.error.code}, message=${resp.error.message}`);
           if (
             resp.error.code === "messaging/invalid-registration-token" ||
             resp.error.code === "messaging/registration-token-not-registered"
@@ -82,11 +89,11 @@ export class FcmService {
 
       if (result.failureCount > 0) {
         this.logger.warn(
-          `FCM: ${result.successCount} sent, ${result.failureCount} failed`,
+          `FCM: ${result.successCount} sent, ${result.failureCount} failed, ${result.invalidTokens.length} invalid`,
         );
       }
     } catch (err) {
-      this.logger.error("FCM send failed", err);
+      this.logger.error("FCM send failed — exception thrown", err);
     }
 
     return result;

@@ -56,6 +56,7 @@ const DOT_SIZE: Record<AvatarSize, string> = {
 interface AvatarProps {
   name: string;
   userId: string;
+  imageUrl?: string | null;
   size?: AvatarSize;
   showPresenceDot?: boolean;
   isOnline?: boolean;
@@ -65,6 +66,7 @@ interface AvatarProps {
 export function Avatar({
   name,
   userId,
+  imageUrl,
   size = "md",
   showPresenceDot = false,
   isOnline = false,
@@ -76,12 +78,20 @@ export function Avatar({
 
   return (
     <div className={`relative shrink-0 ${SIZE_CLASSES[size]} ${className}`}>
-      <div
-        className="w-full h-full rounded-full flex items-center justify-center text-white font-semibold"
-        style={{ backgroundColor: bgColor }}
-      >
-        {initials}
-      </div>
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt={name}
+          className="w-full h-full rounded-full object-cover"
+        />
+      ) : (
+        <div
+          className="w-full h-full rounded-full flex items-center justify-center text-white font-semibold"
+          style={{ backgroundColor: bgColor }}
+        >
+          {initials}
+        </div>
+      )}
 
       {showPresenceDot && (
         <span

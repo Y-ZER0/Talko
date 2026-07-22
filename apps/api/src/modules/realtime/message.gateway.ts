@@ -67,6 +67,12 @@ export class MessageGateway {
         .to(payload.conversationId)
         .emit(SocketEvent.MESSAGE_NEW, message);
 
+      this.notifyMemberUserRooms(
+        payload.conversationId,
+        senderId,
+        message,
+      );
+
       this.notifyOfflineRecipients(
         payload.conversationId,
         senderId,
@@ -77,6 +83,23 @@ export class MessageGateway {
     } catch (err) {
       this.logger.error(`handleMessage failed for clientId=${payload?.clientId}`, err);
       socket.emit(SocketEvent.ERROR, { message: "Failed to send message" });
+    }
+  }
+
+  private async notifyMemberUserRooms(
+    conversationId: string,
+    senderId: string,
+    message: { id: string; content: string | null; senderId: string; conversationId: string },
+  ): Promise<void> {
+    try {
+      const members = await this.memberRepo.findByConversation(conversationId);
+      for (const member of members) {
+        if (member.userId !== senderId) {
+          this.server.to(`user:${member.userId}`).emit(SocketEvent.MESSAGE_NEW, message);
+        }
+      }
+    } catch (err) {
+      this.logger.error("notifyMemberUserRooms failed", err);
     }
   }
 
@@ -91,20 +114,26 @@ export class MessageGateway {
         .map((m) => m.userId)
         .filter((id) => id !== senderId);
 
+      this.logger.log(`notifyOfflineRecipients: conversationId=${conversationId}, members=${members.length}, recipients=${recipientIds.length}`);
+
       if (recipientIds.length === 0) return;
 
       const socketsInRoom = await this.server
         .in(conversationId)
         .fetchSockets();
       const userIdsInRoom = new Set(socketsInRoom.map((s) => s.data.userId));
+      this.logger.log(`notifyOfflineRecipients: ${socketsInRoom.length} socket(s) in room, online user IDs: [${Array.from(userIdsInRoom).join(", ")}]`);
 
       const sender = await this.usersService.findById(senderId);
       const senderName = sender?.username ?? "Someone";
 
       for (const recipientId of recipientIds) {
-        if (!userIdsInRoom.has(recipientId)) {
+        const isOnline = userIdsInRoom.has(recipientId);
+        this.logger.log(`notifyOfflineRecipients: recipientId=${recipientId}, isOnline=${isOnline}`);
+        if (!isOnline) {
           const preview =
             message.content?.slice(0, 120) ?? "Sent an attachment";
+          this.logger.log(`notifyOfflineRecipients: sending push to userId=${recipientId}`);
           await this.notificationsService.notifyUser(
             recipientId,
             conversationId,
@@ -112,6 +141,8 @@ export class MessageGateway {
             preview,
             { messageId: message.id },
           );
+        } else {
+          this.logger.log(`notifyOfflineRecipients: userId=${recipientId} is online in room, skipping push`);
         }
       }
     } catch (err) {

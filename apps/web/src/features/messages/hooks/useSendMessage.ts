@@ -91,8 +91,6 @@ export function useSendMessage(conversationId: string, currentUserId?: string) {
         senderId: effectiveUserId ?? "",
         parentId: data.parentId ?? null,
         content: data.content ?? null,
-        mediaUrl: null,
-        mediaType: null,
         attachments: (data.attachments ?? []).map((a, i) => ({
           id: `temp-att-${data.clientId}-${i}`,
           messageId: `temp-${data.clientId}`,
@@ -103,6 +101,7 @@ export function useSendMessage(conversationId: string, currentUserId?: string) {
           createdAt: new Date().toISOString(),
         })),
         reactions: [],
+        receipts: [],
         isDeleted: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

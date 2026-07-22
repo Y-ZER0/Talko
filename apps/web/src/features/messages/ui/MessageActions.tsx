@@ -15,6 +15,7 @@ export function MessageActions({ isOwn, onEdit, onDelete, onReact }: MessageActi
   const [showEmojiBar, setShowEmojiBar] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const emojiBarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!showMenu) return;
@@ -27,11 +28,22 @@ export function MessageActions({ isOwn, onEdit, onDelete, onReact }: MessageActi
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showMenu]);
 
+  useEffect(() => {
+    if (!showEmojiBar) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (emojiBarRef.current && !emojiBarRef.current.contains(e.target as Node)) {
+        setShowEmojiBar(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showEmojiBar]);
+
   return (
     <div className="relative">
       {/* Reaction bar on hover */}
       {showEmojiBar && (
-        <div className="absolute bottom-full mb-1.5 left-0 flex items-center gap-0.5 bg-surface border border-border rounded-full px-1.5 py-1 shadow-lg z-10">
+        <div ref={emojiBarRef} className="absolute bottom-full mb-1.5 left-0 flex items-center gap-0.5 bg-surface border border-border rounded-full px-1.5 py-1 shadow-lg z-10">
           {QUICK_EMOJI.map((emoji) => (
             <button
               key={emoji}
@@ -109,9 +121,9 @@ export function MessageActions({ isOwn, onEdit, onDelete, onReact }: MessageActi
         </div>
       )}
 
-      {/* Hover trigger buttons — visible at rest on touch, hover-revealed on desktop */}
+      {/* Hover trigger buttons — inline flex items, no overflow */}
       {!showEmojiBar && !showMenu && (
-        <div className="absolute top-1/2 -translate-y-1/2 right-0 translate-x-full flex items-center gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity ml-1">
+        <div className="flex items-center gap-0.5">
           <button
             type="button"
             onClick={() => setShowEmojiBar(true)}

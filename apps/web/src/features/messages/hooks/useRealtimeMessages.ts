@@ -53,22 +53,33 @@ export function useRealtimeMessages(
 
     const handleNewMessage = (message: MessageDto) => {
       if (message.senderId === effectiveUserId) return;
-      updateCache(
-        (msg) => msg,
-        (msg) => !(msg.id === message.id || msg.clientId === message.clientId),
-      );
-      queryClient.setQueryData<InfiniteData<MessagesCursorResponse>>(
+
+      const state = queryClient.getQueryState<InfiniteData<MessagesCursorResponse>>(
         messageKeys.list(conversationId),
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            pages: old.pages.map((page, index) =>
-              index === 0 ? { ...page, data: [...page.data, message] } : page,
-            ),
-          };
-        },
       );
+      const hasData = (state?.data?.pages?.length ?? 0) > 0;
+
+      if (hasData) {
+        const exists = state!.data!.pages.some((page) =>
+          page.data.some(
+            (msg) => msg.id === message.id || msg.clientId === message.clientId,
+          ),
+        );
+        if (!exists) {
+          queryClient.setQueryData<InfiniteData<MessagesCursorResponse>>(
+            messageKeys.list(conversationId),
+            (old) => {
+              if (!old) return old;
+              return {
+                ...old,
+                pages: old.pages.map((page, index) =>
+                  index === 0 ? { ...page, data: [...page.data, message] } : page,
+                ),
+              };
+            },
+          );
+        }
+      }
     };
 
     const handleEdit = (message: MessageDto) => {
@@ -87,12 +98,10 @@ export function useRealtimeMessages(
     }) => {
       updateCache((msg) => {
         if (msg.id !== payload.messageId) return msg;
-        const exists = msg.reactions.some(
-          (r) => r.userId === payload.reaction.userId && r.emoji === payload.emoji,
+        const filtered = msg.reactions.filter(
+          (r) => r.userId !== payload.reaction.userId,
         );
-        return exists
-          ? msg
-          : { ...msg, reactions: [...msg.reactions, payload.reaction] };
+        return { ...msg, reactions: [...filtered, payload.reaction] };
       });
     };
 
@@ -100,12 +109,15 @@ export function useRealtimeMessages(
       messageId: string;
       conversationId: string;
       emoji: string;
+      userId: string;
     }) => {
       updateCache((msg) => {
         if (msg.id !== payload.messageId) return msg;
         return {
           ...msg,
-          reactions: msg.reactions.filter((r) => r.emoji !== payload.emoji),
+          reactions: msg.reactions.filter(
+            (r) => !(r.userId === payload.userId && r.emoji === payload.emoji),
+          ),
         };
       });
     };

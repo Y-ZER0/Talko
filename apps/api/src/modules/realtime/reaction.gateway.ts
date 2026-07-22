@@ -37,11 +37,22 @@ export class ReactionGateway {
       }
 
       const userId = socket.data.userId;
-      const reaction = await this.messagesService.addReaction(
+      const { reaction, replacedEmoji } = await this.messagesService.addReaction(
         userId,
         payload.messageId,
         payload.emoji,
       );
+
+      if (replacedEmoji) {
+        socket.broadcast
+          .to(payload.conversationId)
+          .emit(SocketEvent.REACTION_REMOVE, {
+            messageId: payload.messageId,
+            conversationId: payload.conversationId,
+            emoji: replacedEmoji,
+            userId,
+          });
+      }
 
       socket.broadcast
         .to(payload.conversationId)
@@ -81,6 +92,7 @@ export class ReactionGateway {
           messageId: payload.messageId,
           conversationId: payload.conversationId,
           emoji: payload.emoji,
+          userId,
         });
     } catch (err) {
       this.logger.error(`handleReactionRemove failed`, err);

@@ -7,7 +7,7 @@ import { SocketEvent } from "@repo/shared";
 import { conversationService } from "../services/conversation.service";
 import { conversationKeys } from "./conversationKeys";
 import { useSocket } from "@/features/presence/hooks/useSocket";
-import type { ConversationDto } from "@repo/shared";
+import type { ConversationDto, MessageDto } from "@repo/shared";
 
 export function useConversations() {
   const { getToken, isSignedIn } = useAuth();
@@ -40,13 +40,19 @@ export function useConversations() {
       queryClient.invalidateQueries({ queryKey: conversationKeys.list() });
     };
 
+    const handleMessageNew = (_message: MessageDto) => {
+      queryClient.invalidateQueries({ queryKey: conversationKeys.list() });
+    };
+
     socket.on(SocketEvent.CONVERSATION_NEW, handleNewConversation);
     socket.on(SocketEvent.CONVERSATION_LEAVE, handleLeaveConversation);
     socket.on(SocketEvent.CONVERSATION_DELETED, handleDeletedConversation);
+    socket.on(SocketEvent.MESSAGE_NEW, handleMessageNew);
     return () => {
       socket.off(SocketEvent.CONVERSATION_NEW, handleNewConversation);
       socket.off(SocketEvent.CONVERSATION_LEAVE, handleLeaveConversation);
       socket.off(SocketEvent.CONVERSATION_DELETED, handleDeletedConversation);
+      socket.off(SocketEvent.MESSAGE_NEW, handleMessageNew);
     };
   }, [socket, queryClient]);
 

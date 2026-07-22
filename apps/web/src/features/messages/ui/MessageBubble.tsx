@@ -49,8 +49,9 @@ export function MessageBubble({
 
   useEffect(() => {
     if (!observeRef || !wrapperRef.current) return;
+    if (isOwn) return;
     return observeRef(wrapperRef.current, message.id);
-  }, [observeRef, message.id]);
+  }, [observeRef, message.id, isOwn]);
 
   const handleToggleReaction = useCallback(
     (emoji: string) => {
@@ -76,7 +77,7 @@ export function MessageBubble({
           isOwn ? "self-end items-end" : "self-start items-start"
         }`}
       >
-        <div className="flex items-end gap-2">
+      <div className="flex items-end gap-2">
           {!isOwn && showAvatar && (
             <Avatar name={senderName} userId={message.senderId} size="sm" />
           )}
@@ -143,16 +144,16 @@ export function MessageBubble({
               onCancel={() => onCancelEdit?.()}
             />
           )}
-
-          {!isEditing && (
-            <MessageActions
-              isOwn={isOwn}
-              onEdit={() => onStartEdit?.(message.id)}
-              onDelete={() => onDelete?.(message.id)}
-              onReact={(emoji) => onAddReaction?.(message.id, emoji)}
-            />
-          )}
         </div>
+
+        {!isEditing && (
+          <MessageActions
+            isOwn={isOwn}
+            onEdit={() => onStartEdit?.(message.id)}
+            onDelete={() => onDelete?.(message.id)}
+            onReact={handleToggleReaction}
+          />
+        )}
       </div>
 
       {!isEditing && (
@@ -163,14 +164,14 @@ export function MessageBubble({
         />
       )}
 
-      {showTimestamp && (
-        <div className={`flex items-center gap-1.5 px-1 ${isOwn ? "flex-row-reverse" : ""}`}>
+      <div className={`flex items-center gap-1.5 px-1 ${isOwn ? "flex-row-reverse" : ""}`}>
+        {showTimestamp && (
           <span className="font-mono text-[10px] text-text-muted tracking-wide">
             {formatMessageTime(message.createdAt)}
           </span>
-          {isOwn && <ReadReceiptIcon messageId={message.id} />}
-        </div>
-      )}
+        )}
+        {isOwn && <ReadReceiptIcon messageId={message.id} />}
+      </div>
     </div>
   );
 }

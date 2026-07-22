@@ -1,13 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { UseMutateFunction } from "@tanstack/react-query";
 import type { CreateConversationRequest } from "../../services/conversation.service";
 import type { CreateConversationResponseDto } from "@repo/shared";
+import type { UserSearchResult } from "@/features/users/services/user.service";
 import { FormField, inputClass } from "./FormField";
 import { FormActions } from "./FormActions";
+import { MultiUserSearchSelect } from "./MultiUserSearchSelect";
 
 const groupChatSchema = z.object({
   groupName: z
@@ -15,7 +18,6 @@ const groupChatSchema = z.object({
     .min(1, "Group name is required")
     .max(50, "Group name must be 50 characters or less")
     .trim(),
-  participantIds: z.string().min(1, "At least one participant is required").trim(),
 });
 
 type GroupChatFormData = z.infer<typeof groupChatSchema>;
@@ -33,9 +35,11 @@ export function GroupChatForm({
   isPending: boolean;
   error: Error | null;
 }) {
+  const [selectedUsers, setSelectedUsers] = useState<UserSearchResult[]>([]);
+
   const methods = useForm<GroupChatFormData>({
     resolver: zodResolver(groupChatSchema),
-    defaultValues: { groupName: "", participantIds: "" },
+    defaultValues: { groupName: "" },
   });
 
   const {
@@ -46,19 +50,16 @@ export function GroupChatForm({
 
   const onSubmit = (data: GroupChatFormData) => {
     if (isPending) return;
-    const ids = data.participantIds
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (ids.length === 0) return;
+    if (selectedUsers.length === 0) return;
 
     mutate(
-      { type: "group", participantIds: ids, groupName: data.groupName },
+      { type: "group", participantIds: selectedUsers.map((u) => u.id), groupName: data.groupName },
       {
         onSuccess: (result) => {
           onCreated(result.id);
           onClose();
           methods.reset();
+          setSelectedUsers([]);
         },
       },
     );
@@ -78,16 +79,13 @@ export function GroupChatForm({
         </FormField>
 
         <FormField
-          label="Participant IDs (comma-separated)"
-          htmlFor="participant-ids"
-          error={errors.participantIds}
+          label="Members"
+          htmlFor="participant-search"
+          error={selectedUsers.length === 0 ? { message: "At least one member is required" } : undefined}
         >
-          <input
-            id="participant-ids"
-            type="text"
-            placeholder="user-id-1, user-id-2..."
-            {...register("participantIds")}
-            className={inputClass}
+          <MultiUserSearchSelect
+            selectedUsers={selectedUsers}
+            onSelect={setSelectedUsers}
           />
         </FormField>
 

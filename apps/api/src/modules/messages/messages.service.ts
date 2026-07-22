@@ -9,6 +9,7 @@ import { MessageReaction } from "./entities/message-reaction.entity";
 import { SendMessageRequestDto } from "./dto/send-message-request.dto";
 import { MessagesRepository } from "./repositories/messages.repository";
 import { ConversationMembersRepository } from "../conversations/repositories/conversation-members.repository";
+import { ConversationsRepository } from "../conversations/repositories/conversations.repository";
 import type {
   MessageDto,
   ReceiptUpdateEventPayload,
@@ -21,6 +22,7 @@ export class MessagesService {
   constructor(
     private readonly messagesRepository: MessagesRepository,
     private readonly memberRepository: ConversationMembersRepository,
+    private readonly conversationsRepository: ConversationsRepository,
   ) {}
 
   async create(
@@ -28,12 +30,22 @@ export class MessagesService {
     conversationId: string,
     dto: SendMessageRequestDto,
   ): Promise<MessageDto> {
-    const isMember = await this.memberRepository.findByConversationAndUser(
+    let isMember = await this.memberRepository.findByConversationAndUser(
       conversationId,
       senderId,
     );
-    if (!isMember)
-      throw new NotFoundException("Conversation not found");
+
+    if (!isMember) {
+      const conversation = await this.conversationsRepository.findById(conversationId);
+      if (!conversation) throw new NotFoundException("Conversation not found");
+      if (conversation.isGroup) throw new NotFoundException("Conversation not found");
+
+      isMember = await this.memberRepository.save({
+        conversationId,
+        userId: senderId,
+        role: "member",
+      });
+    }
 
     const existing = await this.messagesRepository.findByClientId(
       conversationId,
@@ -84,7 +96,13 @@ export class MessagesService {
         safeLimit,
       );
 
-    const data = messages.map((m) => this.toDto(m));
+    const messageIds = messages.map((m) => m.id);
+    const receipts = await this.messagesRepository.findReceiptsForMessages(
+      messageIds,
+      userId,
+    );
+
+    const data = messages.map((m) => this.toDto(m, receipts.get(m.id)));
     const nextCursor =
       data.length > 0 ? data[data.length - 1].createdAt : null;
 
@@ -103,18 +121,32 @@ export class MessagesService {
     if (!isMember)
       throw new NotFoundException("Conversation not found");
 
-    await this.messagesRepository.upsertReceipts(messageIds, userId);
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const validIds = messageIds.filter((id) => uuidRegex.test(id));
+    if (validIds.length === 0) return {};
 
-    const maxCreatedAt = await this.messagesRepository.findMaxCreatedAt(messageIds);
+    await this.messagesRepository.upsertReceipts(validIds, userId);
+
+    const maxCreatedAt = await this.messagesRepository.findMaxCreatedAt(validIds);
     if (maxCreatedAt) {
+      const currentMember = await this.memberRepository.findByConversationAndUser(
+        conversationId,
+        userId,
+      );
+      const currentLastReadAt = currentMember?.lastReadAt;
+      const newLastReadAt =
+        currentLastReadAt && currentLastReadAt > maxCreatedAt
+          ? currentLastReadAt
+          : maxCreatedAt;
       await this.memberRepository.updateLastReadAt(
         conversationId,
         userId,
-        maxCreatedAt,
+        newLastReadAt,
       );
     }
 
-    const senders = await this.messagesRepository.findMessageSenders(messageIds);
+    const senders = await this.messagesRepository.findMessageSenders(validIds);
 
     const grouped: Record<string, ReceiptUpdateEventPayload[]> = {};
     for (const { messageId, senderId } of senders) {
@@ -173,18 +205,18 @@ export class MessagesService {
     userId: string,
     messageId: string,
     emoji: string,
-  ): Promise<ReactionDto> {
+  ): Promise<{ reaction: ReactionDto; replacedEmoji: string | null }> {
     const message = await this.messagesRepository.findById(messageId);
     if (!message)
       throw new NotFoundException("Message not found");
 
-    const reaction = await this.messagesRepository.upsertReaction(
+    const { reaction, replacedEmoji } = await this.messagesRepository.upsertReaction(
       messageId,
       userId,
       emoji,
     );
 
-    return this.reactionToDto(reaction);
+    return { reaction: this.reactionToDto(reaction), replacedEmoji };
   }
 
   async removeReaction(
@@ -217,17 +249,21 @@ export class MessagesService {
     };
   }
 
-  toDto(message: Message): MessageDto {
+  toDto(
+    message: Message,
+    receipt?: { userId: string; status: string; readAt: Date | null },
+  ): MessageDto {
     return {
       id: message.id,
       conversationId: message.conversationId,
       senderId: message.senderId,
       parentId: message.parentId ?? null,
       content: message.content ?? null,
-      mediaUrl: message.mediaUrl ?? null,
-      mediaType: message.mediaType ?? null,
       attachments: (message.attachments ?? []).map((a) => this.attachmentToDto(a)),
       reactions: (message.reactions ?? []).map((r) => this.reactionToDto(r)),
+      receipts: receipt
+        ? [{ userId: receipt.userId, status: receipt.status, readAt: receipt.readAt?.toISOString() ?? null }]
+        : [],
       isDeleted: message.isDeleted,
       createdAt: message.createdAt.toISOString(),
       updatedAt: message.updatedAt.toISOString(),

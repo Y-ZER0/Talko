@@ -10,8 +10,8 @@ import { useRegisterServiceWorker } from "@/features/notifications/hooks/useRegi
 import { useFcmToken } from "@/features/notifications/hooks/useFcmToken";
 
 function NotificationsInitializer() {
-  useRegisterServiceWorker();
-  const { register } = useFcmToken();
+  const swReady = useRegisterServiceWorker();
+  const { register } = useFcmToken(swReady);
 
   return <NotificationPermissionPrompt onPermissionGranted={register} />;
 }
